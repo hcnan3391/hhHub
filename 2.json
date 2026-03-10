@@ -1,0 +1,25 @@
+{
+"models": {
+"mode": "merge",
+"providers": {
+"moonshot": {
+"baseUrl": "​api.kimi.com/coding",
+"apiKey": "<YOUR_KIMI_KEY>",
+"api": "anthropic-messages",
+"models": [
+{
+"id": "kimi-for-coding",
+"name": "Kimi For Coding"
+}
+]
+}
+}
+},
+"agents": {
+"defaults": {
+"model": {
+"primary": "moonshot/kimi-for-coding"
+}
+}
+}
+}

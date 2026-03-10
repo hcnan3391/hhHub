@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Material {
+  id          Int      @id @default(autoincrement())
+  alias       String   @unique
+  name        String
+  gitPath     String?
+  description String?  @db.Text
+  type        String?  // 框架类型: react, vue, angular 等
+  category    String?  // 分类: component, layout, form, chart, table 等
+  tags        String?  @db.Text // JSON 数组字符串，存储标签
+  framework   String?  // 具体框架版本: React 18, Vue 3 等
+  uiLibrary   String?  // UI 库: Ant Design, Element UI 等
+  active      Boolean  @default(true)
+  isCustom    Boolean  @default(false)
+  usageCount  Int      @default(0) // 使用次数统计
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Project {
+  id          Int      @id @default(autoincrement())
+  name        String
+  path        String   @unique
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Resource {
+  id        Int      @id @default(autoincrement())
+  name      String
+  url       String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Setting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

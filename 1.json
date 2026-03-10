@@ -1,0 +1,65 @@
+{
+  "meta": {
+    "lastTouchedVersion": "2026.3.7",
+    "lastTouchedAt": "2026-03-08T10:41:04.524Z"
+  },
+  "models": {
+   "mode": "merge",
+    "providers": {
+    "moonshot": {
+    "baseUrl": "​api.kimi.com/coding",
+    "apiKey": "sk-kimi-OU3YREE186dfmhs0LGsfzA313InyEqAwDwN5vZTxqGHGsqxVxkZFuTSP1Ew7peC5",
+    "api": "anthropic-messages",
+    "models": [
+        {
+        "id": "kimi-for-coding",
+        "name": "Kimi For Coding"
+        }
+    ]
+    }
+    }
+  },
+  "agents": {
+    "defaults": {
+    "model": {
+    "primary": "moonshot/kimi-for-coding"
+    }
+    }
+  },
+  "tools": {
+    "profile": "full",
+    "sessions": {
+      "visibility": "all"
+    }
+  },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto",
+    "restart": true,
+    "ownerDisplay": "raw"
+  },
+  "channels": {
+    "feishu": {
+      "appId": "cli_a927a42028b89bcb",
+      "appSecret": "E8wcLSKO3Umr0Ozz0yGgRci0TuHsWaNS",
+      "connectionMode": "websocket",
+      "domain": "feishu",
+      "enabled": true,
+      "requireMention": true
+    }
+  },
+  "gateway": {
+    "mode": "local",
+    "auth": {
+      "mode": "token",
+      "token": "155cbe88e71f714e3c829e4727b13037431eb431c37bba46"
+    }
+  },
+  "plugins": {
+    "entries": {
+      "feishu": {
+        "enabled": true
+      }
+    }
+  }
+}

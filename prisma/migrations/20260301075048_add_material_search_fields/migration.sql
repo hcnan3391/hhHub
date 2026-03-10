@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE `Material` ADD COLUMN `category` VARCHAR(191) NULL,
+    ADD COLUMN `framework` VARCHAR(191) NULL,
+    ADD COLUMN `tags` TEXT NULL,
+    ADD COLUMN `uiLibrary` VARCHAR(191) NULL,
+    ADD COLUMN `usageCount` INTEGER NOT NULL DEFAULT 0;
