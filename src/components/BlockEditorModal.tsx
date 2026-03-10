@@ -28,14 +28,22 @@ const DEFAULT_FILES: FileItem[] = [
     {
         path: 'src/index.tsx',
         code: `import React from 'react';
+import { createRoot } from 'react-dom/client';
 import { Button } from 'antd';
+import 'antd/dist/reset.css';
 
-export default function Demo() {
+function Demo() {
   return (
     <Button type="primary">
       Hello hhHub
     </Button>
   );
+}
+
+const container = document.getElementById('root');
+if (container) {
+  const root = createRoot(container);
+  root.render(<Demo />);
 }`,
     },
     {
@@ -266,13 +274,26 @@ export default function Component() {
     // 转换为 Sandpack 文件格式
     const getSandpackFiles = useCallback(() => {
         const sandpackFiles: Record<string, { code: string }> = {};
+
+        // 找到主代码文件（src/index.tsx）
+        const mainFile = files.find(f => f.path === 'src/index.tsx');
+
+        // react-ts 模板的入口是 /src/index.tsx
+        if (mainFile) {
+            sandpackFiles['/src/index.tsx'] = { code: mainFile.code };
+        }
+
+        // 添加其他辅助文件到 src/ 目录
         files.forEach(file => {
-            sandpackFiles[`/${file.path}`] = { code: file.code };
+            if (file.path !== 'src/index.tsx' && file.path !== 'package.json') {
+                sandpackFiles[`/src/${file.path.replace(/^src\//, '')}`] = { code: file.code };
+            }
         });
 
-        // 确保有入口文件
-        if (!sandpackFiles['/src/index.tsx']) {
-            sandpackFiles['/src/index.tsx'] = { code: '' };
+        // 添加 package.json 以自定义项目配置（如 name: demo-block）
+        const pkgFile = files.find(f => f.path === 'package.json');
+        if (pkgFile) {
+            sandpackFiles['/package.json'] = { code: pkgFile.code };
         }
 
         return sandpackFiles;
