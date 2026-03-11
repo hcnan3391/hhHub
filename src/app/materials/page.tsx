@@ -43,6 +43,21 @@ interface MaterialStats {
     topUsed?: { alias: string; type?: string; category?: string; usageCount: number }[];
 }
 
+interface Block {
+    name: string;
+    key: string;
+    description: string;
+    screenshot: string;
+    previewUrl: string;
+    sourceCode: string;
+    tags: string[];
+    dependencies: string[];
+    category: string;
+    type: string;
+    materialName: string;
+    materialAlias: string;
+}
+
 export default function MaterialsPage() {
     const [options, setOptions] = useState<MaterialOption[]>([]);
     const [selected, setSelected] = useState<string>('');
@@ -56,10 +71,15 @@ export default function MaterialsPage() {
     const [searchKeyword, setSearchKeyword] = useState('');
     const [filterType, setFilterType] = useState<string>('');
     const [filterCategory, setFilterCategory] = useState<string>('');
+    const [filterMaterial, setFilterMaterial] = useState<string>('');
     const [materials, setMaterials] = useState<Material[]>([]);
     const [materialsLoading, setMaterialsLoading] = useState(false);
     const [stats, setStats] = useState<MaterialStats | null>(null);
     const [showStats, setShowStats] = useState(false);
+    // 区块搜索结果
+    const [blocks, setBlocks] = useState<Block[]>([]);
+    const [blocksLoading, setBlocksLoading] = useState(false);
+    const [blocksPagination, setBlocksPagination] = useState({ page: 1, pageSize: 24, total: 0, totalPages: 1 });
 
     const loadMaterials = async () => {
         const res = await fetch('/api/materials').then(r => r.json());
@@ -93,27 +113,42 @@ export default function MaterialsPage() {
         }
     };
 
-    const searchMaterials = async () => {
-        setMaterialsLoading(true);
+    // 搜索区块
+    const searchBlocks = async (page = 1) => {
+        setBlocksLoading(true);
         try {
-            const params = new URLSearchParams({ activeOnly: 'true' });
+            const params = new URLSearchParams();
             if (searchKeyword) params.set('keyword', searchKeyword);
-            if (filterType && filterType !== 'undefined') params.set('type', filterType);
-            if (filterCategory && filterCategory !== 'undefined') params.set('category', filterCategory);
-            const res = await fetch(`/api/materials/search?${params}`).then(r => r.json());
+            if (filterType) params.set('type', filterType);
+            if (filterCategory && filterCategory !== '全部') params.set('category', filterCategory);
+            if (filterMaterial) params.set('materialName', filterMaterial);
+            params.set('page', page.toString());
+            params.set('pageSize', blocksPagination.pageSize.toString());
+
+            const res = await fetch(`/api/blocks/search?${params}`).then(r => r.json());
             if (res.success) {
-                setMaterials(res.data.list);
+                setBlocks(res.data.list);
+                setBlocksPagination({
+                    page: res.data.page,
+                    pageSize: res.data.pageSize,
+                    total: res.data.total,
+                    totalPages: res.data.totalPages,
+                });
             }
         } catch (error) {
             notification.error({ message: '搜索失败' });
         } finally {
-            setMaterialsLoading(false);
+            setBlocksLoading(false);
         }
     };
 
-    const handleSearchMaterials = () => {
-        setSearchMode('materials');
-        searchMaterials();
+    const handleSearchBlocks = () => {
+        setSearchMode('blocks');
+        searchBlocks(1);
+    };
+
+    const handlePageChange = (page: number) => {
+        searchBlocks(page);
     };
 
     const handleSelectMaterial = (materialName: string) => {
@@ -286,7 +321,7 @@ export default function MaterialsPage() {
                     title={
                         <Space style={{ fontSize: 15, fontWeight: 500 }}>
                             <SearchOutlined style={{ color: '#1677ff' }} />
-                            <span>物料搜索</span>
+                            <span>区块搜索</span>
                         </Space>
                     }
                     headStyle={{ 
@@ -297,31 +332,31 @@ export default function MaterialsPage() {
                 >
                     <Space direction="vertical" style={{ width: '100%' }} size={16}>
                         <Input.Search
-                            placeholder="搜索物料库名称、描述、标签..."
+                            placeholder="搜索区块名称、描述、标签..."
                             value={searchKeyword}
                             onChange={e => setSearchKeyword(e.target.value)}
-                            onSearch={handleSearchMaterials}
+                            onSearch={handleSearchBlocks}
                             enterButton={
-                                <Button 
-                                    type="primary" 
+                                <Button
+                                    type="primary"
                                     icon={<SearchOutlined />}
                                     style={{ borderRadius: '0 6px 6px 0' }}
                                 >
-                                    搜索物料库
+                                    搜索区块
                                 </Button>
                             }
                             size="large"
                             style={{ borderRadius: 6 }}
                         />
-                        <div style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: 12, 
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
                             flexWrap: 'wrap',
                             paddingTop: 8
                         }}>
-                            <span style={{ 
-                                color: '#00000073', 
+                            <span style={{
+                                color: '#00000073',
                                 fontSize: 14,
                                 display: 'flex',
                                 alignItems: 'center',
@@ -330,39 +365,51 @@ export default function MaterialsPage() {
                                 <FilterOutlined /> 筛选条件
                             </span>
                             <Select
-                                placeholder="框架类型"
-                                value={filterType || undefined}
-                                onChange={setFilterType}
-                                style={{ width: 160 }}
+                                placeholder="限定物料"
+                                value={filterMaterial || undefined}
+                                onChange={setFilterMaterial}
+                                style={{ width: 180 }}
                                 allowClear
-                                options={frameworkTypes.map(f => ({ 
-                                    label: `${f.icon} ${f.label}`, 
-                                    value: f.value 
+                                options={[
+                                    { label: '全部物料', value: '' },
+                                    ...options
+                                ]}
+                            />
+                            <Select
+                                placeholder="分类"
+                                value={filterCategory || undefined}
+                                onChange={setFilterCategory}
+                                style={{ width: 140 }}
+                                allowClear
+                                options={materialCategories.map(c => ({
+                                    label: `${c.icon} ${c.label}`,
+                                    value: c.value
                                 }))}
                             />
                             <Select
-                                placeholder="物料分类"
-                                value={filterCategory || undefined}
-                                onChange={setFilterCategory}
-                                style={{ width: 160 }}
+                                placeholder="类型"
+                                value={filterType || undefined}
+                                onChange={setFilterType}
+                                style={{ width: 140 }}
                                 allowClear
-                                options={materialCategories.map(c => ({ 
-                                    label: `${c.icon} ${c.label}`, 
-                                    value: c.value 
+                                options={frameworkTypes.map(f => ({
+                                    label: `${f.icon} ${f.label}`,
+                                    value: f.value
                                 }))}
                             />
-                            <Button 
+                            <Button
                                 type="primary"
-                                onClick={handleSearchMaterials}
+                                onClick={() => handleSearchBlocks()}
                                 style={{ borderRadius: 6 }}
                             >
-                                应用筛选
+                                搜索区块
                             </Button>
-                            <Button 
+                            <Button
                                 onClick={() => {
                                     setSearchKeyword('');
                                     setFilterType('');
                                     setFilterCategory('');
+                                    setFilterMaterial('');
                                     setSearchMode('blocks');
                                 }}
                                 style={{ borderRadius: 6 }}
@@ -412,100 +459,135 @@ export default function MaterialsPage() {
                         初始化推荐物料
                     </Button>
                 </div>
-            ) : searchMode === 'materials' ? (
-                // 物料库搜索结果
-                <Spin spinning={materialsLoading}>
-                    {materials.length > 0 ? (
-                        <Row gutter={[16, 16]}>
-                            {materials.map((material) => (
-                                <Col key={material.id} xs={24} sm={12} md={8} lg={6}>
-                                    <Card
-                                        hoverable
-                                        onClick={() => handleSelectMaterial(material.name)}
-                                        style={{ 
-                                            height: '100%',
-                                            borderRadius: 8,
-                                            cursor: 'pointer',
-                                            transition: 'all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1)',
-                                            border: '1px solid #f0f0f0',
-                                        }}
-                                        bodyStyle={{ padding: 20 }}
-                                    >
-                                        <Card.Meta
-                                            title={
-                                                <Space direction="vertical" size={8} style={{ width: '100%' }}>
-                                                    <div style={{ 
-                                                        fontSize: 16, 
+            ) : searchMode === 'blocks' && (searchKeyword || filterType || filterCategory || filterMaterial) ? (
+                // 区块搜索结果
+                <Spin spinning={blocksLoading}>
+                    {blocks.length > 0 ? (
+                        <>
+                            <Row gutter={[16, 16]}>
+                                {blocks.map((block) => (
+                                    <Col key={`${block.materialName}-${block.key}`} xs={24} sm={12} md={8} lg={6}>
+                                        <Card
+                                            hoverable
+                                            onClick={() => handleSelectMaterial(block.materialName)}
+                                            style={{
+                                                height: '100%',
+                                                borderRadius: 8,
+                                                cursor: 'pointer',
+                                                transition: 'all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1)',
+                                                border: '1px solid #f0f0f0',
+                                            }}
+                                            bodyStyle={{ padding: 16 }}
+                                            cover={block.screenshot ? (
+                                                <div style={{
+                                                    height: 140,
+                                                    background: '#f5f5f5',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    overflow: 'hidden'
+                                                }}>
+                                                    <img
+                                                        src={block.screenshot}
+                                                        alt={block.name}
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            objectFit: 'cover'
+                                                        }}
+                                                        onError={(e) => {
+                                                            (e.target as HTMLImageElement).style.display = 'none';
+                                                        }}
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div style={{
+                                                    height: 140,
+                                                    background: '#f5f5f5',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    color: '#bfbfbf'
+                                                }}>
+                                                    暂无预览
+                                                </div>
+                                            )}
+                                        >
+                                            <Card.Meta
+                                                title={
+                                                    <div style={{
+                                                        fontSize: 15,
                                                         fontWeight: 600,
                                                         color: '#000000d9',
                                                         overflow: 'hidden',
                                                         textOverflow: 'ellipsis',
-                                                        whiteSpace: 'nowrap'
+                                                        whiteSpace: 'nowrap',
+                                                        marginBottom: 4
                                                     }}>
-                                                        {material.alias}
+                                                        {block.name}
                                                     </div>
-                                                    <Space size={6} wrap>
-                                                        {material.type && (
-                                                            <Tag color="blue" style={{ margin: 0, borderRadius: 4 }}>
-                                                                {material.type}
-                                                            </Tag>
-                                                        )}
-                                                        {material.category && (
-                                                            <Tag color="green" style={{ margin: 0, borderRadius: 4 }}>
-                                                                {materialCategories.find(c => c.value === material.category)?.label || material.category}
-                                                            </Tag>
-                                                        )}
-                                                    </Space>
-                                                </Space>
-                                            }
-                                            description={
-                                                <div style={{ marginTop: 8 }}>
-                                                    <p style={{ 
-                                                        fontSize: 13, 
-                                                        color: '#00000073',
-                                                        marginBottom: 12,
-                                                        lineHeight: 1.6,
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis',
-                                                        display: '-webkit-box',
-                                                        WebkitLineClamp: 2,
-                                                        WebkitBoxOrient: 'vertical',
-                                                        minHeight: 40
-                                                    }}>
-                                                        {material.description || '暂无描述'}
-                                                    </p>
-                                                    {material.framework && (
-                                                        <div style={{ 
-                                                            fontSize: 12, 
+                                                }
+                                                description={
+                                                    <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                                                        <p style={{
+                                                            fontSize: 12,
                                                             color: '#00000073',
-                                                            marginBottom: 4
+                                                            margin: 0,
+                                                            lineHeight: 1.5,
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            display: '-webkit-box',
+                                                            WebkitLineClamp: 2,
+                                                            WebkitBoxOrient: 'vertical',
+                                                            minHeight: 36
                                                         }}>
-                                                            框架: {material.framework}
-                                                        </div>
-                                                    )}
-                                                    {material.usageCount > 0 && (
-                                                        <div style={{ 
-                                                            fontSize: 12, 
-                                                            color: '#00000073'
-                                                        }}>
-                                                            使用次数: {material.usageCount}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            }
-                                        />
-                                    </Card>
-                                </Col>
-                            ))}
-                        </Row>
+                                                            {block.description || '暂无描述'}
+                                                        </p>
+                                                        <Tag color="blue" style={{ margin: 0, fontSize: 11 }}>
+                                                            来自: {block.materialAlias}
+                                                        </Tag>
+                                                        <Space size={4} wrap>
+                                                            {block.tags?.slice(0, 3).map(tag => (
+                                                                <Tag key={tag} style={{ margin: 0, fontSize: 11 }}>{tag}</Tag>
+                                                            ))}
+                                                        </Space>
+                                                    </Space>
+                                                }
+                                            />
+                                        </Card>
+                                    </Col>
+                                ))}
+                            </Row>
+                            {blocksPagination.totalPages > 1 && (
+                                <div style={{ textAlign: 'center', marginTop: 24 }}>
+                                    <Space>
+                                        <Button
+                                            disabled={blocksPagination.page <= 1}
+                                            onClick={() => handlePageChange(blocksPagination.page - 1)}
+                                        >
+                                            上一页
+                                        </Button>
+                                        <span style={{ color: '#00000073' }}>
+                                            {blocksPagination.page} / {blocksPagination.totalPages} 页 (共 {blocksPagination.total} 条)
+                                        </span>
+                                        <Button
+                                            disabled={blocksPagination.page >= blocksPagination.totalPages}
+                                            onClick={() => handlePageChange(blocksPagination.page + 1)}
+                                        >
+                                            下一页
+                                        </Button>
+                                    </Space>
+                                </div>
+                            )}
+                        </>
                     ) : (
-                        <div style={{ 
-                            textAlign: 'center', 
-                            padding: 60, 
+                        <div style={{
+                            textAlign: 'center',
+                            padding: 60,
                             color: '#00000073',
                             fontSize: 15
                         }}>
-                            未找到匹配的物料库
+                            未找到匹配的区块
                         </div>
                     )}
                 </Spin>

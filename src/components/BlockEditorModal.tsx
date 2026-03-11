@@ -26,24 +26,29 @@ interface FileItem {
 
 const DEFAULT_FILES: FileItem[] = [
     {
-        path: 'src/index.tsx',
+        path: 'src/App.tsx',
         code: `import React from 'react';
-import { createRoot } from 'react-dom/client';
 import { Button } from 'antd';
-import 'antd/dist/reset.css';
 
-function Demo() {
+export default function Demo() {
   return (
     <Button type="primary">
       Hello hhHub
     </Button>
   );
-}
+}`,
+    },
+    {
+        path: 'src/index.tsx',
+        code: `import React from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App';
+import 'antd/dist/reset.css';
 
 const container = document.getElementById('root');
 if (container) {
   const root = createRoot(container);
-  root.render(<Demo />);
+  root.render(<App />);
 }`,
     },
     {
@@ -75,7 +80,7 @@ export default function BlockEditorModal({
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
     const [files, setFiles] = useState<FileItem[]>(DEFAULT_FILES);
-    const [activeFile, setActiveFile] = useState('src/index.tsx');
+    const [activeFile, setActiveFile] = useState('src/App.tsx');
     const [screenshotFile, setScreenshotFile] = useState<UploadFile[]>([]);
     const [renameModal, setRenameModal] = useState<{ open: boolean; oldPath: string; newPath: string }>({
         open: false,
@@ -104,7 +109,7 @@ export default function BlockEditorModal({
     // 重置状态
     const resetState = useCallback(() => {
         setFiles(DEFAULT_FILES);
-        setActiveFile('src/index.tsx');
+        setActiveFile('src/App.tsx');
         setScreenshotFile([]);
         setRenameModal({ open: false, oldPath: '', newPath: '' });
         setAddFileModal({ open: false, fileName: 'src/utils.ts' });
@@ -143,7 +148,7 @@ export default function BlockEditorModal({
 
     // 自动生成 package.json
     const generatePackageJson = useCallback(() => {
-        const mainCode = files.find(f => f.path === 'src/index.tsx')?.code || '';
+        const mainCode = files.find(f => f.path === 'src/App.tsx')?.code || '';
         const deps = parseDependencies(mainCode);
 
         return JSON.stringify(
@@ -161,7 +166,7 @@ export default function BlockEditorModal({
     // 更新 package.json 依赖 - 使用 ref 避免无限循环
     const prevCodeRef = React.useRef('');
     useEffect(() => {
-        const mainCode = files.find(f => f.path === 'src/index.tsx')?.code;
+        const mainCode = files.find(f => f.path === 'src/App.tsx')?.code;
         if (mainCode && mainCode !== prevCodeRef.current) {
             prevCodeRef.current = mainCode;
             const newPackageJson = generatePackageJson();
@@ -255,14 +260,14 @@ export default function Component() {
 
     // 删除文件
     const deleteFile = (path: string) => {
-        if (path === 'src/index.tsx' || path === 'package.json') {
+        if (path === 'src/index.tsx' || path === 'src/App.tsx') {
             notification.warning({ message: '不能删除必要文件' });
             return;
         }
         const newFiles = files.filter(f => f.path !== path);
         setFiles(newFiles);
         if (activeFile === path) {
-            setActiveFile('src/index.tsx');
+            setActiveFile('src/App.tsx');
         }
     };
 
@@ -275,18 +280,23 @@ export default function Component() {
     const getSandpackFiles = useCallback(() => {
         const sandpackFiles: Record<string, { code: string }> = {};
 
-        // 找到主代码文件（src/index.tsx）
-        const mainFile = files.find(f => f.path === 'src/index.tsx');
-
-        // react-ts 模板的入口是 /src/index.tsx
-        if (mainFile) {
-            sandpackFiles['/src/index.tsx'] = { code: mainFile.code };
+        // react-ts 模板需要 /src/App.tsx 作为组件入口
+        const appFile = files.find(f => f.path === 'src/App.tsx');
+        if (appFile) {
+            sandpackFiles['/src/App.tsx'] = { code: appFile.code };
         }
 
-        // 添加其他辅助文件到 src/ 目录
+        // react-ts 模板需要 /src/index.tsx 作为渲染入口
+        const indexFile = files.find(f => f.path === 'src/index.tsx');
+        if (indexFile) {
+            sandpackFiles['/src/index.tsx'] = { code: indexFile.code };
+        }
+
+        // 添加其他辅助文件
         files.forEach(file => {
-            if (file.path !== 'src/index.tsx' && file.path !== 'package.json') {
-                sandpackFiles[`/src/${file.path.replace(/^src\//, '')}`] = { code: file.code };
+            if (file.path !== 'src/App.tsx' && file.path !== 'src/index.tsx' && file.path !== 'package.json') {
+                const sandpackPath = file.path.startsWith('src/') ? `/src/${file.path.replace(/^src\//, '')}` : `/${file.path}`;
+                sandpackFiles[sandpackPath] = { code: file.code };
             }
         });
 
@@ -361,7 +371,7 @@ export default function Component() {
     };
 
     const sandpackFiles = getSandpackFiles();
-    const dependencies = parseDependencies(files.find(f => f.path === 'src/index.tsx')?.code || '');
+    const dependencies = parseDependencies(files.find(f => f.path === 'src/App.tsx')?.code || '');
     const currentFile = files.find(f => f.path === activeFile);
 
     return (
