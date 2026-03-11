@@ -158,9 +158,21 @@ function writeMaterialsJson(repoPath: string, blocks: BlockInfo[]): void {
     fs.writeFileSync(materialsJsonPath, JSON.stringify(materialsJson, null, 2), 'utf-8');
 }
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
-        const materials = await prisma.material.findMany({ where: { active: true } });
+        const { searchParams } = new URL(req.url);
+        const sourceName = searchParams.get('source'); // 支持同步单个物料源
+
+        let materials;
+        if (sourceName) {
+            // 同步指定物料源
+            materials = await prisma.material.findMany({
+                where: { name: sourceName, active: true }
+            });
+        } else {
+            // 同步所有启用的物料源
+            materials = await prisma.material.findMany({ where: { active: true } });
+        }
         
         if (materials.length === 0) {
             return NextResponse.json({
