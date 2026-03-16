@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS 批量操作交互原型</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+
+        /* 自定义动画 */
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        @keyframes check-bounce {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .animate-slide-up { animation: slideUp 0.3s ease-out; }
+        .animate-slide-down { animation: slideDown 0.3s ease-out; }
+        .animate-check { animation: check-bounce 0.3s ease-out; }
+        .animate-shake { animation: shake 0.4s ease-in-out; }
+
+        .selection-ring::before {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            border: 2px solid #3b82f6;
+            animation: pulse-ring 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+
+        /* 表格行选中效果 */
+        .row-selected {
+            background-color: #eff6ff !important;
+            position: relative;
+        }
+
+        .row-selected::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: #3b82f6;
+        }
+
+        /* 自定义复选框 */
+        .custom-checkbox {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid #d1d5db;
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .custom-checkbox:checked {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+
+        .custom-checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            color: white;
+            font-size: 12px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .custom-checkbox:indeterminate {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+
+        .custom-checkbox:indeterminate::after {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 2px;
+            background: white;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* 批量操作栏 */
+        .batch-bar {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .batch-bar.hidden {
+            transform: translateY(100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* 下拉菜单 */
+        .dropdown-menu {
+            transform-origin: top right;
+            transition: all 0.2s;
+        }
+
+        .dropdown-menu.hidden {
+            transform: scale(0.95);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* 进度条动画 */
+        .progress-fill {
+            transition: width 0.3s ease;
+        }
+
+        /* 骨架屏 */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
+        }
+
+        @keyframes skeleton-loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 顶部导航 -->
+    <nav class="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center">
+                        <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-cube text-white text-sm"></i>
+                        </div>
+                        <span class="ml-3 text-lg font-semibold text-gray-900">SaaS Admin</span>
+                    </div>
+                    <div class="hidden sm:ml-8 sm:flex sm:space-x-8">
+                        <a href="#" class="border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            订单管理
+                        </a>
+                        <a href="#" class="border-transparent text-gray-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            商品管理
+                        </a>
+                        <a href="#" class="border-transparent text-gray-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                            客户管理
+                        </a>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="p-2 text-gray-400 hover:text-gray-500">
+                        <i class="fas fa-bell"></i>
+                    </button>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 bg-gray-300 rounded-full"></div>
+                        <span class="text-sm text-gray-700">管理员</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- 页面标题 -->
+        <div class="mb-6">
+            <h1 class="text-2xl font-bold text-gray-900">订单管理</h1>
+            <p class="mt-1 text-sm text-gray-500">管理和处理客户订单，支持批量操作</p>
+        </div>
+
+        <!-- 筛选栏 -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+            <div class="flex flex-wrap gap-4 items-center">
+                <div class="flex-1 min-w-[200px]">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="searchInput" placeholder="搜索订单号、客户名称..."
+                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    </div>
+                </div>
+                <select class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                    <option>全部状态</option>
+                    <option>待付款</option>
+                    <option>待发货</option>
+                    <option>已发货</option>
+                    <option>已完成</option>
+                </select>
+                <select class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                    <option>全部时间</option>
+                    <option>今天</option>
+                    <option>最近7天</option>
+                    <option>最近30天</option>
+                </select>
+                <button class="px-4 py-2 text-gray-600 hover:text-gray-800 text-sm">
+                    <i class="fas fa-filter mr-1"></i> 更多筛选
+                </button>
+            </div>
+        </div>
+
+        <!-- 数据表格 -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left w-12">
+                                <input type="checkbox" id="selectAll" class="custom-checkbox">
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                订单信息
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                客户
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                金额
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                状态
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                下单时间
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                操作
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="orderTable">
+                        <!-- 数据行由 JS 生成 -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 分页 -->
+            <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-gray-500">
+                        显示 <span class="font-medium">1</span> 到 <span class="font-medium">10</span> 条，共 <span class="font-medium">256</span> 条
+                    </div>
+                    <div class="flex space-x-2">
+                        <button class="px-3 py-1 border border-gray-300 rounded text-sm text-gray-500 hover:bg-gray-50 disabled:opacity-50" disabled>
+                            上一页
+                        </button>
+                        <button class="px-3 py-1 border border-gray-300 rounded text-sm text-gray-500 hover:bg-gray-50">
+                            下一页
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 批量操作悬浮栏 -->
+    <div id="batchBar" class="batch-bar hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl z-50 flex items-center space-x-6">
+        <div class="flex items-center space-x-3">
+            <div class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-xs font-bold" id="selectedCount">0</div>
+            <span class="text-sm">已选择</span>
+        </div>
+        <div class="h-6 w-px bg-gray-600"></div>
+        <div class="flex items-center space-x-2">
+            <button onclick="batchAction('print')" class="flex items-center space-x-1 px-3 py-1.5 hover:bg-gray-700 rounded-lg transition-colors text-sm">
+                <i class="fas fa-print text-xs"></i>
+                <span>打印</span>
+            </button>
+            <button onclick="batchAction('export')" class="flex items-center space-x-1 px-3 py-1.5 hover:bg-gray-700 rounded-lg transition-colors text-sm">
+                <i class="fas fa-download text-xs"></i>
+                <span>导出</span>
+            </button>
+            <button onclick="batchAction('ship')" class="flex items-center space-x-1 px-3 py-1.5 hover:bg-gray-700 rounded-lg transition-colors text-sm">
+                <i class="fas fa-shipping-fast text-xs"></i>
+                <span>批量发货</span>
+            </button>
+            <div class="relative">
+                <button onclick="toggleMoreMenu()" class="flex items-center space-x-1 px-3 py-1.5 hover:bg-gray-700 rounded-lg transition-colors text-sm">
+                    <span>更多</span>
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </button>
+                <!-- 更多操作下拉 -->
+                <div id="moreMenu" class="dropdown-menu hidden absolute bottom-full right-0 mb-2 w-40 bg-white rounded-lg shadow-xl border border-gray-200 py-1">
+                    <button onclick="batchAction('tag')" class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                        <i class="fas fa-tag text-gray-400 mr-2"></i> 批量打标签
+                    </button>
+                    <button onclick="batchAction('assign')" class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                        <i class="fas fa-user-plus text-gray-400 mr-2"></i> 分配客服
+                    </button>
+                    <div class="border-t border-gray-100 my-1"></div>
+                    <button onclick="batchAction('cancel')" class="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center">
+                        <i class="fas fa-times-circle mr-2"></i> 批量取消
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="h-6 w-px bg-gray-600"></div>
+        <button onclick="clearSelection()" class="text-gray-400 hover:text-white text-sm">
+            取消选择
+        </button>
+    </div>
+
+    <!-- 批量编辑弹窗 -->
+    <div id="batchModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 animate-slide-down">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900" id="modalTitle">批量操作</h3>
+                    <p class="text-sm text-gray-500 mt-1">已选择 <span id="modalCount" class="font-medium text-blue-600">0</span> 项</p>
+                </div>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div class="p-6" id="modalContent">
+                <!-- 动态内容 -->
+            </div>
+
+            <div class="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-end space-x-3">
+                <button onclick="closeModal()" class="px-4 py-2 text-gray-700 hover:text-gray-900 text-sm font-medium">
+                    取消
+                </button>
+                <button id="modalConfirm" onclick="confirmBatchAction()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg">
+                    确认操作
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 操作反馈 Toast -->
+    <div id="toast" class="fixed top-6 right-6 z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl border border-gray-200 p-4 flex items-start space-x-3 animate-slide-down max-w-sm">
+            <div id="toastIcon" class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center">
+                <!-- 动态图标 -->
+            </div>
+            <div class="flex-1">
+                <h4 id="toastTitle" class="text-sm font-semibold text-gray-900"></h4>
+                <p id="toastMessage" class="text-sm text-gray-500 mt-1"></p>
+            </div>
+            <button onclick="hideToast()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- 进度弹窗 -->
+    <div id="progressModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-spinner fa-spin text-2xl text-blue-600"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900">正在处理</h3>
+                <p class="text-sm text-gray-500 mt-1">请稍候，正在执行批量操作...</p>
+            </div>
+
+            <div class="mb-2 flex justify-between text-sm">
+                <span class="text-gray-600">处理进度</span>
+                <span class="text-gray-900 font-medium"><span id="progressPercent">0</span>%</span>
+            </div>
+            <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div id="progressBar" class="h-full bg-blue-600 rounded-full progress-fill" style="width: 0%"></div>
+            </div>
+            <div class="mt-2 text-xs text-gray-500 text-center">
+                已完成 <span id="progressCurrent">0</span> / <span id="progressTotal">0</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模拟订单数据
+        const orders = [
+            { id: 'ORD-2024-001', customer: '张三', email: 'zhangsan@example.com', amount: 299.00, status: 'pending', statusText: '待付款', time: '2024-01-15 10:23' },
+            { id: 'ORD-2024-002', customer: '李四', email: 'lisi@example.com', amount: 1580.00, status: 'paid', statusText: '待发货', time: '2024-01-15 09:45' },
+            { id: 'ORD-2024-003', customer: '王五', email: 'wangwu@example.com', amount: 89.90, status: 'shipped', statusText: '已发货', time: '2024-01-14 16:30' },
+            { id: 'ORD-2024-004', customer: '赵六', email: 'zhaoliu@example.com', amount: 2560.00, status: 'completed', statusText: '已完成', time: '2024-01-14 14:20' },
+            { id: 'ORD-2024-005', customer: '钱七', email: 'qianqi@example.com', amount: 399.00, status: 'pending', statusText: '待付款', time: '2024-01-14 11:15' },
+            { id: 'ORD-2024-006', customer: '孙八', email: 'sunba@example.com', amount: 1299.00, status: 'paid', statusText: '待发货', time: '2024-01-13 18:45' },
+            { id: 'ORD-2024-007', customer: '周九', email: 'zhoujiu@example.com', amount: 599.00, status: 'shipped', statusText: '已发货', time: '2024-01-13 15:30' },
+            { id: 'ORD-2024-008', customer: '吴十', email: 'wushi@example.com', amount: 89.90, status: 'completed', statusText: '已完成', time: '2024-01-13 10:00' },
+            { id: 'ORD-2024-009', customer: '郑十一', email: 'zhengshi@example.com', amount: 2999.00, status: 'cancelled', statusText: '已取消', time: '2024-01-12 16:20' },
+            { id: 'ORD-2024-010', customer: '陈十二', email: 'chenshier@example.com', amount: 199.00, status: 'pending', statusText: '待付款', time: '2024-01-12 09:30' },
+        ];
+
+        let selectedOrders = new Set();
+        let currentAction = '';
+
+        // 状态标签样式
+        const statusStyles = {
+            pending: 'bg-yellow-100 text-yellow-800',
+            paid: 'bg-blue-100 text-blue-800',
+            shipped: 'bg-purple-100 text-purple-800',
+            completed: 'bg-green-100 text-green-800',
+            cancelled: 'bg-gray-100 text-gray-800'
+        };
+
+        // 初始化表格
+        function renderTable() {
+            const tbody = document.getElementById('orderTable');
+            tbody.innerHTML = orders.map(order => `
+                <tr class="hover:bg-gray-50 transition-colors ${selectedOrders.has(order.id) ? 'row-selected' : ''}" data-id="${order.id}">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <input type="checkbox" class="custom-checkbox row-checkbox" data-id="${order.id}"
+                            ${selectedOrders.has(order.id) ? 'checked' : ''}>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-box text-gray-400"></i>
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">${order.id}</div>
+                                <div class="text-xs text-gray-500">标准配送</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">${order.customer}</div>
+                        <div class="text-xs text-gray-500">${order.email}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">¥${order.amount.toFixed(2)}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[order.status]}">
+                            ${order.statusText}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${order.time}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button class="text-blue-600 hover:text-blue-900 mr-3">查看</button>
+                        <button class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            // 绑定复选框事件
+            document.querySelectorAll('.row-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', (e) => {
+                    const id = e.target.dataset.id;
+                    if (e.target.checked) {
+                        selectedOrders.add(id);
+                    } else {
+                        selectedOrders.delete(id);
+                    }
+                    updateSelectionUI();
+                });
+            });
+
+            // 绑定行点击事件（点击行选中）
+            document.querySelectorAll('#orderTable tr').forEach(row => {
+                row.addEventListener('click', (e) => {
+                    if (e.target.closest('button') || e.target.closest('input')) return;
+
+                    const checkbox = row.querySelector('.row-checkbox');
+                    checkbox.checked = !checkbox.checked;
+                    checkbox.dispatchEvent(new Event('change'));
+                });
+            });
+        }
+
+        // 更新选择状态 UI
+        function updateSelectionUI() {
+            const selectAll = document.getElementById('selectAll');
+            const batchBar = document.getElementById('batchBar');
+            const selectedCount = document.getElementById('selectedCount');
+
+            const count = selectedOrders.size;
+
+            // 更新全选框状态
+            if (count === 0) {
+                selectAll.checked = false;
+                selectAll.indeterminate = false;
+                batchBar.classList.add('hidden');
+            } else if (count === orders.length) {
+                selectAll.checked = true;
+                selectAll.indeterminate = false;
+                batchBar.classList.remove('hidden');
+            } else {
+                selectAll.checked = false;
+                selectAll.indeterminate = true;
+                batchBar.classList.remove('hidden');
+            }
+
+            // 更新选中数量
+            selectedCount.textContent = count;
+
+            // 更新行样式
+            document.querySelectorAll('#orderTable tr').forEach(row => {
+                const id = row.dataset.id;
+                if (selectedOrders.has(id)) {
+                    row.classList.add('row-selected');
+                } else {
+                    row.classList.remove('row-selected');
+                }
+            });
+        }
+
+        // 全选/取消全选
+        document.getElementById('selectAll').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                orders.forEach(order => selectedOrders.add(order.id));
+            } else {
+                selectedOrders.clear();
+            }
+            renderTable();
+            updateSelectionUI();
+        });
+
+        // 清除选择
+        function clearSelection() {
+            selectedOrders.clear();
+            renderTable();
+            updateSelectionUI();
+        }
+
+        // 切换更多菜单
+        function toggleMoreMenu() {
+            const menu = document.getElementById('moreMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        // 点击外部关闭菜单
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.relative')) {
+                document.getElementById('moreMenu').classList.add('hidden');
+            }
+        });
+
+        // 批量操作
+        function batchAction(action) {
+            currentAction = action;
+            document.getElementById('moreMenu').classList.add('hidden');
+
+            const modal = document.getElementById('batchModal');
+            const title = document.getElementById('modalTitle');
+            const content = document.getElementById('modalContent');
+            const count = document.getElementById('modalCount');
+
+            count.textContent = selectedOrders.size;
+
+            const contents = {
+                print: `
+                    <div class="text-center py-4">
+                        <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-print text-2xl text-blue-600"></i>
+                        </div>
+                        <p class="text-gray-600">将为选中的 <strong>${selectedOrders.size}</strong> 个订单生成打印单</p>
+                        <div class="mt-4 text-left bg-gray-50 p-4 rounded-lg">
+                            <label class="flex items-center space-x-2 mb-2">
+                                <input type="checkbox" checked class="custom-checkbox">
+                                <span class="text-sm text-gray-700">包含商品明细</span>
+                            </label>
+                            <label class="flex items-center space-x-2 mb-2">
+                                <input type="checkbox" checked class="custom-checkbox">
+                                <span class="text-sm text-gray-700">包含收货地址</span>
+                            </label>
+                            <label class="flex items-center space-x-2">
+                                <input type="checkbox" class="custom-checkbox">
+                                <span class="text-sm text-gray-700">打印两份</span>
+                            </label>
+                        </div>
+                    </div>
+                `,
+                export: `
+                    <div class="space-y-4">
+                        <div class="flex items-center space-x-4">
+                            <label class="flex-1 p-4 border-2 border-blue-500 bg-blue-50 rounded-lg cursor-pointer">
+                                <input type="radio" name="format" value="excel" checked class="hidden">
+                                <div class="flex items-center space-x-3">
+                                    <i class="fas fa-file-excel text-2xl text-green-600"></i>
+                                    <div>
+                                        <div class="font-medium text-gray-900">Excel 格式</div>
+                                        <div class="text-xs text-gray-500">.xlsx</div>
+                                    </div>
+                                </div>
+                            </label>
+                            <label class="flex-1 p-4 border-2 border-gray-200 hover:border-gray-300 rounded-lg cursor-pointer">
+                                <input type="radio" name="format" value="csv" class="hidden">
+                                <div class="flex items-center space-x-3">
+                                    <i class="fas fa-file-csv text-2xl text-yellow-600"></i>
+                                    <div>
+                                        <div class="font-medium text-gray-900">CSV 格式</div>
+                                        <div class="text-xs text-gray-500">.csv</div>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600 mb-2">导出字段</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" checked class="custom-checkbox">
+                                    <span class="text-sm text-gray-700">订单号</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" checked class="custom-checkbox">
+                                    <span class="text-sm text-gray-700">客户信息</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" checked class="custom-checkbox">
+                                    <span class="text-sm text-gray-700">订单金额</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="checkbox" class="custom-checkbox">
+                                    <span class="text-sm text-gray-700">备注信息</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                ship: `
+                    <div class="space-y-4">
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                            <div class="flex items-start">
+                                <i class="fas fa-exclamation-triangle text-yellow-600 mt-0.5 mr-2"></i>
+                                <p class="text-sm text-yellow-800">仅"待发货"状态的订单会被处理，其他状态订单将自动跳过</p>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">物流公司</label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option>请选择物流公司</option>
+                                <option>顺丰速运</option>
+                                <option>中通快递</option>
+                                <option>圆通快递</option>
+                                <option>韵达快递</option>
+                                <option>申通快递</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">物流单号生成方式</label>
+                            <div class="space-y-2">
+                                <label class="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                                    <input type="radio" name="tracking" value="auto" checked class="text-blue-600">
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">自动生成电子面单</div>
+                                        <div class="text-xs text-gray-500">系统自动获取物流单号</div>
+                                    </div>
+                                </label>
+                                <label class="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                                    <input type="radio" name="tracking" value="manual" class="text-blue-600">
+                                    <div>
+                                        <div class="text-sm font-medium text-gray-900">手动输入物流单号</div>
+                                        <div class="text-xs text-gray-500">批量导入物流单号</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                tag: `
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">选择标签</label>
+                            <div class="flex flex-wrap gap-2">
+                                <button class="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-medium hover:bg-blue-200 transition-colors">
+                                    <i class="fas fa-check mr-1"></i> 加急
+                                </button>
+                                <button class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors">
+                                    VIP客户
+                                </button>
+                                <button class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors">
+                                    大额订单
+                                </button>
+                                <button class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors">
+                                    需回访
+                                </button>
+                                <button class="px-3 py-1.5 border-2 border-dashed border-gray-300 text-gray-500 rounded-full text-sm font-medium hover:border-gray-400 hover:text-gray-600">
+                                    <i class="fas fa-plus mr-1"></i> 新建标签
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">操作类型</label>
+                            <div class="flex space-x-4">
+                                <label class="flex items-center space-x-2">
+                                    <input type="radio" name="tagAction" value="add" checked class="text-blue-600">
+                                    <span class="text-sm text-gray-700">添加标签</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="radio" name="tagAction" value="remove" class="text-blue-600">
+                                    <span class="text-sm text-gray-700">移除标签</span>
+                                </label>
+                                <label class="flex items-center space-x-2">
+                                    <input type="radio" name="tagAction" value="replace" class="text-blue-600">
+                                    <span class="text-sm text-gray-700">替换所有标签</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                assign: `
+                    <div class="space-y-4">
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" placeholder="搜索客服人员..."
+                                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div class="space-y-2 max-h-60 overflow-y-auto">
+                            <label class="flex items-center p-3 border border-blue-500 bg-blue-50 rounded-lg cursor-pointer">
+                                <input type="radio" name="assignee" value="1" checked class="text-blue-600 mr-3">
+                                <div class="flex items-center flex-1">
+                                    <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-medium mr-3">小</div>
+                                    <div>
+                                        <div class="font-medium text-gray-900">小明</div>
+                                        <div class="text-xs text-gray-500">当前处理中: 12单</div>
+                                    </div>
+                                    <span class="ml-auto text-xs bg-green-100 text-green-800 px-2 py-1 rounded">在线</span>
+                                </div>
+                            </label>
+                            <label class="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                                <input type="radio" name="assignee" value="2" class="text-blue-600 mr-3">
+                                <div class="flex items-center flex-1">
+                                    <div class="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-white font-medium mr-3">红</div>
+                                    <div>
+                                        <div class="font-medium text-gray-900">小红</div>
+                                        <div class="text-xs text-gray-500">当前处理中: 8单</div>
+                                    </div>
+                                    <span class="ml-auto text-xs bg-green-100 text-green-800 px-2 py-1 rounded">在线</span>
+                                </div>
+                            </label>
+                            <label class="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                                <input type="radio" name="assignee" value="3" class="text-blue-600 mr-3">
+                                <div class="flex items-center flex-1">
+                                    <div class="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-white font-medium mr-3">李</div>
+                                    <div>
+                                        <div class="font-medium text-gray-900">李华</div>
+                                        <div class="text-xs text-gray-500">当前处理中: 20单</div>
+                                    </div>
+                                    <span class="ml-auto text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">离线</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                `,
+                cancel: `
+                    <div class="text-center py-4">
+                        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-exclamation-triangle text-2xl text-red-600"></i>
+                        </div>
+                        <h4 class="text-lg font-medium text-gray-900 mb-2">确认取消订单？</h4>
+                        <p class="text-gray-600 mb-4">此操作将取消选中的 <strong>${selectedOrders.size}</strong> 个订单，不可撤销</p>
+                        <div class="text-left bg-red-50 border border-red-200 rounded-lg p-4">
+                            <label class="block text-sm font-medium text-red-800 mb-2">取消原因（必填）</label>
+                            <select class="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 mb-3">
+                                <option>请选择取消原因</option>
+                                <option>客户要求取消</option>
+                                <option>库存不足</option>
+                                <option>订单信息错误</option>
+                                <option>其他原因</option>
+                            </select>
+                            <textarea placeholder="补充说明..." rows="3"
+                                class="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"></textarea>
+                        </div>
+                    </div>
+                `
+            };
+
+            title.textContent = {
+                print: '批量打印',
+                export: '导出数据',
+                ship: '批量发货',
+                tag: '批量打标签',
+                assign: '分配客服',
+                cancel: '批量取消订单'
+            }[action];
+
+            content.innerHTML = contents[action];
+            modal.classList.remove('hidden');
+        }
+
+        // 关闭弹窗
+        function closeModal() {
+            document.getElementById('batchModal').classList.add('hidden');
+        }
+
+        // 确认批量操作
+        function confirmBatchAction() {
+            closeModal();
+
+            if (currentAction === 'cancel') {
+                // 危险操作二次确认
+                showToast('warning', '需要二次确认', '请确认是否要取消这些订单');
+                return;
+            }
+
+            // 显示进度
+            showProgress(selectedOrders.size);
+        }
+
+        // 显示进度
+        function showProgress(total) {
+            const modal = document.getElementById('progressModal');
+            const bar = document.getElementById('progressBar');
+            const percent = document.getElementById('progressPercent');
+            const current = document.getElementById('progressCurrent');
+            const totalEl = document.getElementById('progressTotal');
+
+            modal.classList.remove('hidden');
+            totalEl.textContent = total;
+
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+
+                    setTimeout(() => {
+                        modal.classList.add('hidden');
+                        showToast('success', '操作成功', `已成功处理 ${total} 个订单`);
+                        clearSelection();
+                    }, 500);
+                }
+
+                bar.style.width = progress + '%';
+                percent.textContent = Math.floor(progress);
+                current.textContent = Math.floor(progress / 100 * total);
+            }, 200);
+        }
+
+        // 显示 Toast
+        function showToast(type, title, message) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            const titleEl = document.getElementById('toastTitle');
+            const messageEl = document.getElementById('toastMessage');
+
+            const icons = {
+                success: '<i class="fas fa-check text-green-600"></i>',
+                error: '<i class="fas fa-times text-red-600"></i>',
+                warning: '<i class="fas fa-exclamation text-yellow-600"></i>',
+                info: '<i class="fas fa-info text-blue-600"></i>'
+            };
+
+            const bgColors = {
+                success: 'bg-green-100',
+                error: 'bg-red-100',
+                warning: 'bg-yellow-100',
+                info: 'bg-blue-100'
+            };
+
+            icon.innerHTML = icons[type];
+            icon.className = `flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${bgColors[type]}`;
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+
+            toast.classList.remove('hidden');
+
+            setTimeout(() => {
+                hideToast();
+            }, 5000);
+        }
+
+        // 隐藏 Toast
+        function hideToast() {
+            document.getElementById('toast').classList.add('hidden');
+        }
+
+        // 搜索功能
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const value = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#orderTable tr');
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(value) ? '' : 'none';
+            });
+        });
+
+        // 初始化
+        renderTable();
+    </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "demo-block",
+  "version": "1.0.0",
+  "description": "示例区块",
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "antd": "^5.12.0"
+  }
+}

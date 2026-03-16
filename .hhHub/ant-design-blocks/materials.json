@@ -1,0 +1,17 @@
+{
+  "list": {
+    "blocks": [
+      {
+        "key": "demo",
+        "name": "我的按钮",
+        "description": "",
+        "tags": [
+          "按钮"
+        ],
+        "category": "component",
+        "screenshot": "/api/blocks/screenshot?materialsName=ant-design-blocks&blockName=demo",
+        "previewUrl": ""
+      }
+    ]
+  }
+}

@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实时表单保存原型</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .form-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        /* 状态栏 */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 24px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 14px;
+        }
+
+        .save-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+
+        .save-status.saving {
+            color: #0066ff;
+        }
+
+        .save-status.saved {
+            color: #28a745;
+        }
+
+        .save-status.error {
+            color: #dc3545;
+        }
+
+        .save-status.offline {
+            color: #ffc107;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .status-icon {
+            width: 18px;
+            height: 18px;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .connection-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #28a745;
+        }
+
+        .connection-dot.offline {
+            background: #dc3545;
+        }
+
+        /* 表单主体 */
+        .form-body {
+            padding: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group input.saving-field,
+        .form-group textarea.saving-field {
+            border-color: #0066ff;
+            background: #f0f7ff;
+        }
+
+        .form-group input.saved-field,
+        .form-group textarea.saved-field {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 标签输入 */
+        .tag-input {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 8px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            min-height: 48px;
+            align-items: center;
+        }
+
+        .tag-input:focus-within {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 16px;
+            font-size: 13px;
+        }
+
+        .tag button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1;
+            padding: 0;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tag-input input {
+            border: none;
+            padding: 4px 8px;
+            flex: 1;
+            min-width: 100px;
+            background: transparent;
+        }
+
+        .tag-input input:focus {
+            outline: none;
+            box-shadow: none;
+        }
+
+        /* 操作按钮 */
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 1px solid #dee2e6;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        /* 调试面板 */
+        .debug-panel {
+            margin-top: 30px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .debug-header {
+            padding: 16px 24px;
+            background: #343a40;
+            color: white;
+            font-weight: 600;
+        }
+
+        .debug-body {
+            padding: 20px 24px;
+        }
+
+        .debug-controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .log-container {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 4px 0;
+            border-bottom: 1px solid #333;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-time {
+            color: #858585;
+            margin-right: 8px;
+        }
+
+        .log-info { color: #4fc1ff; }
+        .log-success { color: #89d185; }
+        .log-error { color: #f48771; }
+        .log-warning { color: #dcdcaa; }
+
+        /* 冲突弹窗 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 16px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow: hidden;
+            animation: modalSlide 0.3s ease;
+        }
+
+        @keyframes modalSlide {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .modal-header h2 {
+            color: #dc3545;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .conflict-content {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+
+        .conflict-version {
+            margin-bottom: 12px;
+        }
+
+        .conflict-version h4 {
+            font-size: 13px;
+            color: #6c757d;
+            margin-bottom: 4px;
+        }
+
+        .conflict-version p {
+            font-size: 15px;
+            color: #333;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        /* 离线提示 */
+        .offline-banner {
+            background: #ffc107;
+            color: #333;
+            padding: 12px 24px;
+            text-align: center;
+            font-weight: 500;
+            display: none;
+        }
+
+        .offline-banner.show {
+            display: block;
+        }
+
+        /* 字段级状态指示器 */
+        .field-status {
+            display: inline-flex;
+            align-items: center;
+            margin-left: 8px;
+            font-size: 12px;
+            font-weight: normal;
+        }
+
+        .unsaved-indicator {
+            color: #ffc107;
+        }
+
+        /* 最后保存时间 */
+        .last-saved {
+            font-size: 12px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>实时表单保存原型</h1>
+            <p>输入内容将自动保存，无需手动点击保存按钮</p>
+        </div>
+
+        <div class="form-card">
+            <!-- 离线提示 -->
+            <div class="offline-banner" id="offlineBanner">
+                ⚠️ 网络已断开，您的更改将在网络恢复后自动同步
+            </div>
+
+            <!-- 状态栏 -->
+            <div class="status-bar">
+                <div class="save-status saved" id="saveStatus">
+                    <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span id="saveStatusText">已保存</span>
+                    <span class="last-saved" id="lastSaved"></span>
+                </div>
+                <div class="connection-status">
+                    <span class="connection-dot" id="connectionDot"></span>
+                    <span id="connectionText">在线</span>
+                </div>
+            </div>
+
+            <!-- 表单主体 -->
+            <div class="form-body">
+                <form id="realtimeForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="firstName">
+                                姓名
+                                <span class="field-status" id="status-firstName"></span>
+                            </label>
+                            <input type="text" id="firstName" name="firstName" placeholder="请输入姓名">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">
+                                邮箱
+                                <span class="field-status" id="status-email"></span>
+                            </label>
+                            <input type="email" id="email" name="email" placeholder="example@email.com">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="title">
+                            标题
+                            <span class="field-status" id="status-title"></span>
+                        </label>
+                        <input type="text" id="title" name="title" placeholder="输入文章标题">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="category">分类</label>
+                        <select id="category" name="category">
+                            <option value="">请选择分类</option>
+                            <option value="tech">技术</option>
+                            <option value="design">设计</option>
+                            <option value="product">产品</option>
+                            <option value="life">生活</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="content">
+                            内容
+                            <span class="field-status" id="status-content"></span>
+                        </label>
+                        <textarea id="content" name="content" placeholder="开始编写内容...
+
+试试以下操作：
+- 输入文字，观察自动保存
+- 断开网络，模拟离线模式
+- 打开控制台查看日志"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>标签</label>
+                        <div class="tag-input" id="tagInput">
+                            <input type="text" id="tagInputField" placeholder="输入标签按回车">
+                        </div>
+                        <input type="hidden" id="tags" name="tags">
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="simulateConflict()">模拟冲突</button>
+                        <button type="button" class="btn btn-secondary" onclick="exportData()">导出数据</button>
+                        <button type="submit" class="btn btn-primary">立即保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 调试面板 -->
+        <div class="debug-panel">
+            <div class="debug-header">
+                🔧 调试控制台
+            </div>
+            <div class="debug-body">
+                <div class="debug-controls">
+                    <button class="btn btn-secondary" onclick="toggleNetwork()">切换网络状态</button>
+                    <button class="btn btn-secondary" onclick="simulateError()">模拟保存失败</button>
+                    <button class="btn btn-secondary" onclick="clearLog()">清空日志</button>
+                    <button class="btn btn-danger" onclick="resetForm()">重置表单</button>
+                </div>
+                <div class="log-container" id="logContainer">
+                    <div class="log-entry">
+                        <span class="log-time">系统</span>
+                        <span class="log-info">实时表单保存原型已初始化</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 冲突解决弹窗 -->
+    <div class="modal-overlay" id="conflictModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                    检测到版本冲突
+                </h2>
+            </div>
+            <div class="modal-body">
+                <p>服务器上的内容已被其他用户修改，请选择处理方式：</p>
+                <div class="conflict-content">
+                    <div class="conflict-version">
+                        <h4>服务器版本</h4>
+                        <p id="serverVersion">-</p>
+                    </div>
+                    <div class="conflict-version">
+                        <h4>您的版本</h4>
+                        <p id="localVersion">-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="resolveConflict('mine')">保留我的更改</button>
+                <button class="btn btn-secondary" onclick="resolveConflict('theirs')">使用服务器版本</button>
+                <button class="btn btn-primary" onclick="resolveConflict('merge')">智能合并</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 配置 ====================
+        const CONFIG = {
+            DEBOUNCE_DELAY: 800,        // 自动保存延迟（毫秒）
+            SAVE_RETRY_DELAY: 3000,     // 重试延迟
+            MAX_RETRY_COUNT: 3,         // 最大重试次数
+        };
+
+        // ==================== 状态管理 ====================
+        const state = {
+            isOnline: true,
+            isSaving: false,
+            lastSaved: null,
+            pendingChanges: {},
+            offlineQueue: [],
+            formData: {},
+            fieldStatus: {},
+            shouldFail: false,          // 模拟失败标志
+            conflictData: null,         // 冲突数据
+        };
+
+        // ==================== DOM 元素 ====================
+        const elements = {
+            form: document.getElementById('realtimeForm'),
+            saveStatus: document.getElementById('saveStatus'),
+            saveStatusText: document.getElementById('saveStatusText'),
+            lastSaved: document.getElementById('lastSaved'),
+            connectionDot: document.getElementById('connectionDot'),
+            connectionText: document.getElementById('connectionText'),
+            offlineBanner: document.getElementById('offlineBanner'),
+            logContainer: document.getElementById('logContainer'),
+            conflictModal: document.getElementById('conflictModal'),
+            serverVersion: document.getElementById('serverVersion'),
+            localVersion: document.getElementById('localVersion'),
+            tagInput: document.getElementById('tagInput'),
+            tagInputField: document.getElementById('tagInputField'),
+            tags: document.getElementById('tags'),
+        };
+
+        // ==================== 日志系统 ====================
+        function log(message, type = 'info') {
+            const time = new Date().toLocaleTimeString('zh-CN');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-${type}">${message}</span>
+            `;
+            elements.logContainer.appendChild(entry);
+            elements.logContainer.scrollTop = elements.logContainer.scrollHeight;
+        }
+
+        function clearLog() {
+            elements.logContainer.innerHTML = '';
+            log('日志已清空', 'info');
+        }
+
+        // ==================== 状态管理 ====================
+        function updateSaveStatus(status, message) {
+            elements.saveStatus.className = `save-status ${status}`;
+            elements.saveStatusText.textContent = message;
+
+            const iconMap = {
+                saving: '<div class="spinner"></div>',
+                saved: '<svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>',
+                error: '<svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+                offline: '<svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>',
+            };
+
+            const icon = elements.saveStatus.querySelector('.spinner, .status-icon');
+            if (icon) {
+                icon.outerHTML = iconMap[status] || iconMap.saved;
+            }
+        }
+
+        function updateConnectionStatus(online) {
+            state.isOnline = online;
+            elements.connectionDot.classList.toggle('offline', !online);
+            elements.connectionText.textContent = online ? '在线' : '离线';
+            elements.offlineBanner.classList.toggle('show', !online);
+
+            if (online && state.offlineQueue.length > 0) {
+                log('网络已恢复，开始同步离线数据...', 'success');
+                syncOfflineData();
+            } else if (!online) {
+                log('网络已断开，进入离线模式', 'warning');
+                updateSaveStatus('offline', '等待同步');
+            }
+        }
+
+        function updateFieldStatus(fieldName, status) {
+            const indicator = document.getElementById(`status-${fieldName}`);
+            if (!indicator) return;
+
+            const field = document.getElementById(fieldName);
+            state.fieldStatus[fieldName] = status;
+
+            const statusMap = {
+                unsaved: { text: '● 未保存', class: 'unsaved-indicator' },
+                saving: { text: '⏳ 保存中...', class: 'saving-indicator' },
+                saved: { text: '✓ 已保存', class: 'saved-indicator' },
+            };
+
+            const info = statusMap[status];
+            if (info) {
+                indicator.textContent = info.text;
+                indicator.className = `field-status ${info.class}`;
+
+                if (field) {
+                    field.classList.remove('saving-field', 'saved-field');
+                    if (status === 'saving') field.classList.add('saving-field');
+                    if (status === 'saved') field.classList.add('saved-field');
+                }
+            }
+        }
+
+        // ==================== 防抖函数 ====================
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // ==================== 保存逻辑 ====================
+        async function saveFormData(fieldName = null) {
+            if (state.isSaving) return;
+
+            const data = collectFormData();
+
+            // 检查是否有变化
+            if (JSON.stringify(data) === JSON.stringify(state.formData)) {
+                return;
+            }
+
+            // 离线模式
+            if (!state.isOnline) {
+                state.offlineQueue.push({
+                    timestamp: Date.now(),
+                    data: { ...data },
+                });
+                log(`数据已加入离线队列 (队列长度: ${state.offlineQueue.length})`, 'warning');
+                return;
+            }
+
+            state.isSaving = true;
+            updateSaveStatus('saving', '保存中...');
+            if (fieldName) updateFieldStatus(fieldName, 'saving');
+
+            log(`开始保存${fieldName ? ` [${fieldName}]` : ''}...`);
+
+            try {
+                // 模拟API调用
+                await mockSaveAPI(data);
+
+                // 保存成功
+                state.formData = { ...data };
+                state.lastSaved = new Date();
+                state.isSaving = false;
+
+                updateSaveStatus('saved', '已保存');
+                elements.lastSaved.textContent = `(${state.lastSaved.toLocaleTimeString('zh-CN')})`;
+                if (fieldName) updateFieldStatus(fieldName, 'saved');
+
+                log('保存成功', 'success');
+
+                // 清除已保存字段的状态指示
+                setTimeout(() => {
+                    if (fieldName) {
+                        const indicator = document.getElementById(`status-${fieldName}`);
+                        if (indicator) indicator.textContent = '';
+                        const field = document.getElementById(fieldName);
+                        if (field) field.classList.remove('saved-field');
+                    }
+                }, 2000);
+
+            } catch (error) {
+                state.isSaving = false;
+                updateSaveStatus('error', '保存失败');
+                log(`保存失败: ${error.message}`, 'error');
+
+                if (fieldName) {
+                    updateFieldStatus(fieldName, 'unsaved');
+                }
+
+                // 重试逻辑
+                if (!state.shouldFail) {
+                    log(`${CONFIG.SAVE_RETRY_DELAY/1000}秒后重试...`, 'warning');
+                    setTimeout(() => saveFormData(fieldName), CONFIG.SAVE_RETRY_DELAY);
+                }
+            }
+        }
+
+        // 模拟API调用
+        function mockSaveAPI(data) {
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    // 模拟冲突检测
+                    if (state.conflictData) {
+                        reject(new Error('版本冲突'));
+                        return;
+                    }
+
+                    // 模拟随机失败（当shouldFail为true时）
+                    if (state.shouldFail) {
+                        reject(new Error('网络请求失败'));
+                        return;
+                    }
+
+                    // 模拟正常延迟
+                    resolve({ success: true, timestamp: Date.now() });
+                }, 800 + Math.random() * 400);
+            });
+        }
+
+        // 同步离线数据
+        async function syncOfflineData() {
+            if (state.offlineQueue.length === 0) return;
+
+            updateSaveStatus('saving', '同步中...');
+
+            const queue = [...state.offlineQueue];
+            state.offlineQueue = [];
+
+            log(`开始同步 ${queue.length} 条离线数据...`, 'info');
+
+            try {
+                // 批量保存
+                const latest = queue[queue.length - 1];
+                await mockSaveAPI(latest.data);
+
+                state.formData = latest.data;
+                state.lastSaved = new Date();
+
+                updateSaveStatus('saved', '已同步');
+                elements.lastSaved.textContent = `(${state.lastSaved.toLocaleTimeString('zh-CN')})`;
+
+                log('离线数据同步完成', 'success');
+            } catch (error) {
+                // 同步失败，重新加入队列
+                state.offlineQueue.unshift(...queue);
+                updateSaveStatus('error', '同步失败');
+                log('离线数据同步失败，稍后重试', 'error');
+            }
+        }
+
+        // ==================== 表单操作 ====================
+        function collectFormData() {
+            const formData = new FormData(elements.form);
+            const data = {};
+            for (const [key, value] of formData.entries()) {
+                data[key] = value;
+            }
+            data.tags = elements.tags.value;
+            return data;
+        }
+
+        const debouncedSave = debounce((fieldName) => {
+            saveFormData(fieldName);
+        }, CONFIG.DEBOUNCE_DELAY);
+
+        function handleInput(e) {
+            const field = e.target;
+            if (!field.id || field.type === 'hidden') return;
+
+            updateFieldStatus(field.id, 'unsaved');
+            debouncedSave(field.id);
+        }
+
+        // ==================== 标签输入 ====================
+        let tags = [];
+
+        function renderTags() {
+            const existing = elements.tagInput.querySelectorAll('.tag');
+            existing.forEach(t => t.remove());
+
+            tags.forEach((tag, index) => {
+                const tagEl = document.createElement('span');
+                tagEl.className = 'tag';
+                tagEl.innerHTML = `
+                    ${tag}
+                    <button onclick="removeTag(${index})">&times;</button>
+                `;
+                elements.tagInput.insertBefore(tagEl, elements.tagInputField);
+            });
+
+            elements.tags.value = tags.join(',');
+            debouncedSave('tags');
+        }
+
+        function removeTag(index) {
+            tags.splice(index, 1);
+            renderTags();
+        }
+
+        elements.tagInputField.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const value = e.target.value.trim();
+                if (value && !tags.includes(value)) {
+                    tags.push(value);
+                    renderTags();
+                    e.target.value = '';
+                }
+            } else if (e.key === 'Backspace' && !e.target.value && tags.length > 0) {
+                tags.pop();
+                renderTags();
+            }
+        });
+
+        // ==================== 调试功能 ====================
+        function toggleNetwork() {
+            updateConnectionStatus(!state.isOnline);
+        }
+
+        function simulateError() {
+            state.shouldFail = !state.shouldFail;
+            log(state.shouldFail ? '已启用保存失败模拟' : '已禁用保存失败模拟',
+                state.shouldFail ? 'warning' : 'info');
+        }
+
+        function resetForm() {
+            elements.form.reset();
+            tags = [];
+            renderTags();
+            state.formData = {};
+            state.offlineQueue = [];
+            state.fieldStatus = {};
+            document.querySelectorAll('.field-status').forEach(el => el.textContent = '');
+            document.querySelectorAll('.saving-field, .saved-field').forEach(el => {
+                el.classList.remove('saving-field', 'saved-field');
+            });
+            updateSaveStatus('saved', '已重置');
+            log('表单已重置', 'info');
+        }
+
+        function exportData() {
+            const data = collectFormData();
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `form-data-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            log('数据已导出', 'success');
+        }
+
+        // ==================== 冲突处理 ====================
+        function simulateConflict() {
+            state.conflictData = {
+                server: {
+                    title: '服务器版本标题',
+                    content: '这是服务器上的内容，已被其他用户修改...',
+                },
+                local: {
+                    title: document.getElementById('title').value || '本地标题',
+                    content: document.getElementById('content').value || '本地内容',
+                }
+            };
+
+            elements.serverVersion.textContent = state.conflictData.server.content || '(空)';
+            elements.localVersion.textContent = state.conflictData.local.content || '(空)';
+
+            saveFormData().then(() => {
+                // 冲突会在API调用中被检测到
+            }).catch(() => {
+                elements.conflictModal.classList.add('show');
+            });
+        }
+
+        function resolveConflict(strategy) {
+            elements.conflictModal.classList.remove('show');
+
+            switch(strategy) {
+                case 'mine':
+                    log('选择：保留我的更改', 'info');
+                    state.conflictData = null;
+                    saveFormData();
+                    break;
+                case 'theirs':
+                    log('选择：使用服务器版本', 'info');
+                    document.getElementById('title').value = state.conflictData.server.title;
+                    document.getElementById('content').value = state.conflictData.server.content;
+                    state.conflictData = null;
+                    saveFormData();
+                    break;
+                case 'merge':
+                    log('选择：智能合并', 'info');
+                    const merged = state.conflictData.local.content + '\n\n[合并]\n\n' + state.conflictData.server.content;
+                    document.getElementById('content').value = merged;
+                    state.conflictData = null;
+                    saveFormData();
+                    break;
+            }
+        }
+
+        // ==================== 事件监听 ====================
+        elements.form.addEventListener('input', handleInput);
+        elements.form.addEventListener('change', handleInput);
+
+        elements.form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveFormData();
+        });
+
+        // 页面离开提示
+        window.addEventListener('beforeunload', (e) => {
+            const current = collectFormData();
+            const hasUnsaved = JSON.stringify(current) !== JSON.stringify(state.formData);
+
+            if (hasUnsaved || state.offlineQueue.length > 0) {
+                e.preventDefault();
+                e.returnValue = '您有未保存的更改，确定要离开吗？';
+            }
+        });
+
+        // 监听网络状态变化
+        window.addEventListener('online', () => updateConnectionStatus(true));
+        window.addEventListener('offline', () => updateConnectionStatus(false));
+
+        // 初始化
+        log('实时表单保存原型已初始化', 'info');
+        log(`自动保存延迟: ${CONFIG.DEBOUNCE_DELAY}ms`, 'info');
+    </script>
+</body>
+</html>
