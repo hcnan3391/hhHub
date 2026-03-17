@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>开城配置检查清单</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* 头部 */
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #1a1a2e;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 15px;
+        }
+
+        /* 进度总览卡片 */
+        .progress-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 32px;
+            color: white;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .progress-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .progress-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #4ade80;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .progress-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        /* 状态提示卡片 */
+        .alert-card {
+            display: none;
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .alert-card.show {
+            display: flex;
+        }
+
+        .alert-card.success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #86efac;
+        }
+
+        .alert-card.warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fcd34d;
+        }
+
+        /* 配置分类卡片 */
+        .category-card {
+            background: white;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            overflow: hidden;
+        }
+
+        .category-header {
+            padding: 20px 24px;
+            background: #fafafa;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .category-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+
+        .category-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .category-icon.blue { background: #dbeafe; }
+        .category-icon.green { background: #dcfce7; }
+        .category-icon.orange { background: #ffedd5; }
+        .category-icon.purple { background: #f3e8ff; }
+        .category-icon.red { background: #fee2e2; }
+
+        .category-progress {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .category-progress.completed {
+            color: #16a34a;
+            font-weight: 500;
+        }
+
+        /* 配置项列表 */
+        .config-list {
+            padding: 8px 0;
+        }
+
+        .config-item {
+            display: flex;
+            align-items: center;
+            padding: 16px 24px;
+            border-bottom: 1px solid #f5f5f5;
+            transition: background 0.2s;
+        }
+
+        .config-item:last-child {
+            border-bottom: none;
+        }
+
+        .config-item:hover {
+            background: #fafafa;
+        }
+
+        .config-item.pending {
+            background: #fffbeb;
+        }
+
+        .config-status {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 16px;
+            flex-shrink: 0;
+        }
+
+        .config-status.completed {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .config-status.pending {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .config-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .config-name {
+            font-size: 15px;
+            font-weight: 500;
+            color: #1a1a2e;
+            margin-bottom: 4px;
+        }
+
+        .config-desc {
+            font-size: 13px;
+            color: #888;
+        }
+
+        .config-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-left: 16px;
+        }
+
+        .config-time {
+            font-size: 13px;
+            color: #999;
+        }
+
+        .config-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* 按钮 */
+        .btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 1px solid #e0e0e0;
+        }
+
+        .btn-secondary:hover {
+            background: #f5f5f5;
+            border-color: #667eea;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: #667eea;
+            padding: 6px 12px;
+        }
+
+        .btn-ghost:hover {
+            background: #f0f7ff;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        /* 底部操作栏 */
+        .sticky-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #e5e5e5;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+        }
+
+        .footer-content {
+            max-width: 900px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .footer-info {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .footer-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        /* 动画 */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .config-item {
+            animation: slideIn 0.3s ease;
+        }
+
+        /* 快捷导航 */
+        .quick-nav {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .quick-nav-item {
+            padding: 8px 16px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quick-nav-item:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .quick-nav-item.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        /* 响应式 */
+        @media (max-width: 640px) {
+            .config-item {
+                flex-wrap: wrap;
+            }
+
+            .config-meta {
+                width: 100%;
+                margin-left: 44px;
+                margin-top: 12px;
+                justify-content: space-between;
+            }
+
+            .progress-actions {
+                flex-wrap: wrap;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>🎯 开城配置检查清单</h1>
+            <p>请完成以下配置项，确保城市正常运营</p>
+        </div>
+
+        <!-- 进度总览 -->
+        <div class="progress-card">
+            <div class="progress-header">
+                <span class="progress-title">整体配置进度</span>
+                <span class="progress-badge" id="progressBadge">0/0 已完成</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+            <div class="progress-stats">
+                <span id="progressText">已完成 0%，继续加油！</span>
+                <span id="pendingCount">剩余 0 项待配置</span>
+            </div>
+            <div class="progress-actions">
+                <button class="btn btn-secondary" onclick="scrollToPending()">
+                    查看待办项
+                </button>
+                <button class="btn btn-secondary" onclick="toggleAll(true)">
+                    模拟全部完成
+                </button>
+                <button class="btn btn-secondary" onclick="toggleAll(false)">
+                    重置全部
+                </button>
+            </div>
+        </div>
+
+        <!-- 状态提示 -->
+        <div class="alert-card success" id="successAlert">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 13l4 4L19 7"/>
+            </svg>
+            <span>🎉 恭喜！所有配置已完成，可以提交审核了</span>
+        </div>
+
+        <div class="alert-card warning" id="warningAlert">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>⚠️ 还有未完成的配置项，请继续完善</span>
+        </div>
+
+        <!-- 快捷导航 -->
+        <div class="quick-nav">
+            <div class="quick-nav-item active" onclick="filterCategory('all')">全部</div>
+            <div class="quick-nav-item" onclick="filterCategory('pending')">待配置</div>
+            <div class="quick-nav-item" onclick="filterCategory('completed')">已完成</div>
+        </div>
+
+        <!-- 配置列表容器 -->
+        <div id="configContainer"></div>
+    </div>
+
+    <!-- 底部操作栏 -->
+    <div class="sticky-footer">
+        <div class="footer-content">
+            <div class="footer-info">
+                <span id="footerStatus">配置未完成</span>
+            </div>
+            <div class="footer-actions">
+                <button class="btn btn-secondary" onclick="saveDraft()">保存草稿</button>
+                <button class="btn btn-primary" onclick="submitAudit()" id="submitBtn" disabled>
+                    提交审核
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 配置数据 ====================
+        const configData = [
+            {
+                id: 'basic',
+                name: '基础信息配置',
+                icon: '🏢',
+                color: 'blue',
+                items: [
+                    {
+                        id: 'company_info',
+                        name: '企业基本信息',
+                        desc: '营业执照、法人信息、联系方式',
+                        completed: true,
+                        time: '2024-01-15 10:30',
+                        url: '/config/company'
+                    },
+                    {
+                        id: 'city_info',
+                        name: '城市运营信息',
+                        desc: '城市选择、运营区域、服务范围',
+                        completed: false,
+                        url: '/config/city'
+                    },
+                    {
+                        id: 'contact_person',
+                        name: '负责人设置',
+                        desc: '城市负责人、联系方式、权限分配',
+                        completed: false,
+                        url: '/config/contact'
+                    }
+                ]
+            },
+            {
+                id: 'business',
+                name: '业务配置',
+                icon: '📋',
+                color: 'green',
+                items: [
+                    {
+                        id: 'service_type',
+                        name: '服务类型配置',
+                        desc: '开通的服务类型、服务标准',
+                        completed: false,
+                        url: '/config/service'
+                    },
+                    {
+                        id: 'price_config',
+                        name: '价格体系配置',
+                        desc: '基础价格、动态调价规则',
+                        completed: false,
+                        url: '/config/price'
+                    },
+                    {
+                        id: 'time_config',
+                        name: '营业时间配置',
+                        desc: '服务时段、特殊日期安排',
+                        completed: true,
+                        time: '2024-01-15 11:00',
+                        url: '/config/time'
+                    },
+                    {
+                        id: 'area_config',
+                        name: '服务区域划分',
+                        desc: '配送范围、区域边界设置',
+                        completed: false,
+                        url: '/config/area'
+                    }
+                ]
+            },
+            {
+                id: 'finance',
+                name: '财务配置',
+                icon: '💰',
+                color: 'orange',
+                items: [
+                    {
+                        id: 'settlement_account',
+                        name: '结算账户配置',
+                        desc: '收款账户、结算周期、开票信息',
+                        completed: false,
+                        url: '/config/settlement'
+                    },
+                    {
+                        id: 'invoice_config',
+                        name: '发票配置',
+                        desc: '发票类型、税率、开票规则',
+                        completed: false,
+                        url: '/config/invoice'
+                    }
+                ]
+            },
+            {
+                id: 'resource',
+                name: '资源配置',
+                icon: '🚗',
+                color: 'purple',
+                items: [
+                    {
+                        id: 'vehicle_config',
+                        name: '车辆资源配置',
+                        desc: '车辆类型、数量、调度规则',
+                        completed: true,
+                        time: '2024-01-15 14:20',
+                        url: '/config/vehicle'
+                    },
+                    {
+                        id: 'staff_config',
+                        name: '人员配置',
+                        desc: '司机招募、培训、排班',
+                        completed: false,
+                        url: '/config/staff'
+                    },
+                    {
+                        id: 'station_config',
+                        name: '站点配置',
+                        desc: '站点位置、容量、运营状态',
+                        completed: false,
+                        url: '/config/station'
+                    }
+                ]
+            },
+            {
+                id: 'system',
+                name: '系统配置',
+                icon: '⚙️',
+                color: 'red',
+                items: [
+                    {
+                        id: 'api_config',
+                        name: '接口对接配置',
+                        desc: '第三方系统对接、API密钥',
+                        completed: false,
+                        url: '/config/api'
+                    },
+                    {
+                        id: 'notify_config',
+                        name: '通知模板配置',
+                        desc: '短信、推送、邮件模板',
+                        completed: false,
+                        url: '/config/notify'
+                    },
+                    {
+                        id: 'alert_config',
+                        name: '告警规则配置',
+                        desc: '异常监控、告警阈值、通知人',
+                        completed: false,
+                        url: '/config/alert'
+                    }
+                ]
+            }
+        ];
+
+        // ==================== 渲染函数 ====================
+        function render() {
+            const container = document.getElementById('configContainer');
+            container.innerHTML = '';
+
+            let total = 0;
+            let completed = 0;
+
+            configData.forEach(category => {
+                const catCompleted = category.items.filter(i => i.completed).length;
+                const catTotal = category.items.length;
+                total += catTotal;
+                completed += catCompleted;
+
+                const isCatComplete = catCompleted === catTotal;
+
+                const card = document.createElement('div');
+                card.className = 'category-card';
+                card.dataset.category = category.id;
+                card.innerHTML = `
+                    <div class="category-header">
+                        <div class="category-title">
+                            <div class="category-icon ${category.color}">${category.icon}</div>
+                            <span>${category.name}</span>
+                        </div>
+                        <div class="category-progress ${isCatComplete ? 'completed' : ''}">
+                            ${isCatComplete ? '✓ 已完成' : `${catCompleted}/${catTotal} 项`}
+                        </div>
+                    </div>
+                    <div class="config-list">
+                        ${category.items.map(item => `
+                            <div class="config-item ${item.completed ? '' : 'pending'}" data-item="${item.id}">
+                                <div class="config-status ${item.completed ? 'completed' : 'pending'}">
+                                    ${item.completed ? '✓' : '✕'}
+                                </div>
+                                <div class="config-info">
+                                    <div class="config-name">${item.name}</div>
+                                    <div class="config-desc">${item.desc}</div>
+                                </div>
+                                <div class="config-meta">
+                                    ${item.time ? `<span class="config-time">${item.time}</span>` : ''}
+                                    <div class="config-actions">
+                                        <button class="btn btn-ghost btn-sm" onclick="toggleItem('${item.id}')">
+                                            ${item.completed ? '取消' : '标记完成'}
+                                        </button>
+                                        <a href="${item.url}" class="btn btn-primary btn-sm" onclick="return goToConfig('${item.id}', '${item.url}')">
+                                            ${item.completed ? '查看' : '去配置'} →
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            updateProgress(total, completed);
+        }
+
+        function updateProgress(total, completed) {
+            const percentage = Math.round((completed / total) * 100);
+            const pending = total - completed;
+
+            // 更新进度条
+            document.getElementById('progressFill').style.width = `${percentage}%`;
+            document.getElementById('progressBadge').textContent = `${completed}/${total} 已完成`;
+            document.getElementById('progressText').textContent = getProgressText(percentage);
+            document.getElementById('pendingCount').textContent = `剩余 ${pending} 项待配置`;
+
+            // 更新提示
+            document.getElementById('successAlert').classList.toggle('show', percentage === 100);
+            document.getElementById('warningAlert').classList.toggle('show', percentage < 100);
+
+            // 更新底部状态
+            const footerStatus = document.getElementById('footerStatus');
+            const submitBtn = document.getElementById('submitBtn');
+
+            if (percentage === 100) {
+                footerStatus.textContent = '✓ 所有配置已完成，可以提交审核';
+                footerStatus.style.color = '#16a34a';
+                submitBtn.disabled = false;
+            } else {
+                footerStatus.textContent = `还差 ${pending} 项配置未完成`;
+                footerStatus.style.color = '#92400e';
+                submitBtn.disabled = true;
+            }
+        }
+
+        function getProgressText(percentage) {
+            if (percentage === 0) return '开始配置吧，每一步都算数！';
+            if (percentage < 30) return `已完成 ${percentage}%，继续加油！`;
+            if (percentage < 60) return `已完成 ${percentage}%，过半啦！`;
+            if (percentage < 100) return `已完成 ${percentage}%，即将完成！`;
+            return '🎉 恭喜！所有配置已完成';
+        }
+
+        // ==================== 交互功能 ====================
+        function toggleItem(itemId) {
+            for (const category of configData) {
+                const item = category.items.find(i => i.id === itemId);
+                if (item) {
+                    item.completed = !item.completed;
+                    if (item.completed) {
+                        item.time = new Date().toLocaleString('zh-CN', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        }).replace(/\//g, '-');
+                    } else {
+                        delete item.time;
+                    }
+                    break;
+                }
+            }
+            render();
+        }
+
+        function toggleAll(completed) {
+            configData.forEach(category => {
+                category.items.forEach(item => {
+                    item.completed = completed;
+                    if (completed) {
+                        item.time = new Date().toLocaleString('zh-CN', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        }).replace(/\//g, '-');
+                    } else {
+                        delete item.time;
+                    }
+                });
+            });
+            render();
+        }
+
+        function goToConfig(itemId, url) {
+            // 这里可以记录跳转前的状态
+            console.log(`跳转到配置页面: ${url}`);
+            // 实际项目中这里跳转页面
+            // window.location.href = url;
+            alert(`即将跳转到: ${url}\n\n实际项目中会自动标记完成状态`);
+            return false;
+        }
+
+        function scrollToPending() {
+            const firstPending = document.querySelector('.config-item.pending');
+            if (firstPending) {
+                firstPending.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                firstPending.style.background = '#fef3c7';
+                setTimeout(() => {
+                    firstPending.style.background = '';
+                }, 2000);
+            } else {
+                alert('没有待配置项了！');
+            }
+        }
+
+        function filterCategory(type) {
+            // 更新导航状态
+            document.querySelectorAll('.quick-nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // 过滤显示
+            const cards = document.querySelectorAll('.category-card');
+            cards.forEach(card => {
+                const items = card.querySelectorAll('.config-item');
+                let hasVisible = false;
+
+                items.forEach(item => {
+                    const isCompleted = !item.classList.contains('pending');
+                    let shouldShow = true;
+
+                    if (type === 'pending') shouldShow = !isCompleted;
+                    else if (type === 'completed') shouldShow = isCompleted;
+
+                    item.style.display = shouldShow ? 'flex' : 'none';
+                    if (shouldShow) hasVisible = true;
+                });
+
+                card.style.display = hasVisible ? 'block' : 'none';
+            });
+        }
+
+        function saveDraft() {
+            // 保存到 localStorage
+            const data = JSON.stringify(configData);
+            localStorage.setItem('cityConfigDraft', data);
+            alert('草稿已保存到本地存储');
+        }
+
+        function loadDraft() {
+            const draft = localStorage.getItem('cityConfigDraft');
+            if (draft) {
+                const parsed = JSON.parse(draft);
+                // 合并数据
+                parsed.forEach((cat, i) => {
+                    if (configData[i]) {
+                        cat.items.forEach((item, j) => {
+                            if (configData[i].items[j]) {
+                                configData[i].items[j].completed = item.completed;
+                                configData[i].items[j].time = item.time;
+                            }
+                        });
+                    }
+                });
+                render();
+                console.log('已加载本地草稿');
+            }
+        }
+
+        function submitAudit() {
+            alert('配置已提交审核！\n\n审核通过后将正式开通城市运营权限。');
+        }
+
+        // ==================== 初始化 ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDraft();
+            render();
+        });
+
+        // 自动保存草稿
+        setInterval(() => {
+            localStorage.setItem('cityConfigDraft', JSON.stringify(configData));
+        }, 30000); // 每30秒自动保存
+    </script>
+</body>
+</html>
