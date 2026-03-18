@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>错误处理体验设计</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* 头部 */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            color: #1a1a2e;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        /* 演示控制面板 */
+        .control-panel {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 32px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+
+        .control-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #333;
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        .control-btn {
+            padding: 12px 16px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            background: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-btn:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .control-btn.active {
+            background: #ede9fe;
+            border-color: #7c3aed;
+            color: #7c3aed;
+        }
+
+        /* 预览区域 */
+        .preview-area {
+            background: white;
+            border-radius: 16px;
+            min-height: 500px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            overflow: hidden;
+        }
+
+        .preview-header {
+            padding: 16px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .preview-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+        }
+
+        .preview-content {
+            padding: 40px;
+            min-height: 400px;
+        }
+
+        /* ========== 错误状态样式 ========== */
+
+        /* 1. 页面级错误 */
+        .error-page {
+            text-align: center;
+            padding: 60px 20px;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .error-illustration {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 32px;
+            background: #fee2e2;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 80px;
+            position: relative;
+        }
+
+        .error-illustration::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: inherit;
+            opacity: 0.3;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .error-code {
+            font-size: 72px;
+            font-weight: 700;
+            color: #dc2626;
+            line-height: 1;
+            margin-bottom: 16px;
+        }
+
+        .error-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1a1a2e;
+            margin-bottom: 12px;
+        }
+
+        .error-message {
+            font-size: 15px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+
+        .error-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* 2. 内联错误提示 */
+        .error-inline {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .error-inline-icon {
+            width: 24px;
+            height: 24px;
+            background: #fee2e2;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #dc2626;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .error-inline-content {
+            flex: 1;
+        }
+
+        .error-inline-title {
+            font-weight: 600;
+            color: #991b1b;
+            margin-bottom: 4px;
+        }
+
+        .error-inline-text {
+            font-size: 14px;
+            color: #b91c1c;
+            margin-bottom: 12px;
+        }
+
+        .error-inline-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* 3. 表单验证错误 */
+        .form-error-demo {
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-input-wrapper {
+            position: relative;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-input.error {
+            border-color: #dc2626;
+            background: #fef2f2;
+        }
+
+        .form-input-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #dc2626;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .form-input.error + .form-input-icon {
+            opacity: 1;
+        }
+
+        .form-error-text {
+            font-size: 13px;
+            color: #dc2626;
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            animation: slideDown 0.2s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .form-hint {
+            font-size: 13px;
+            color: #888;
+            margin-top: 6px;
+        }
+
+        /* 4. 网络错误/重试 */
+        .error-network {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .network-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 24px;
+            position: relative;
+        }
+
+        .network-icon svg {
+            width: 100%;
+            height: 100%;
+            color: #9ca3af;
+        }
+
+        .retry-progress {
+            width: 200px;
+            height: 4px;
+            background: #e9ecef;
+            border-radius: 2px;
+            margin: 20px auto;
+            overflow: hidden;
+        }
+
+        .retry-progress-bar {
+            height: 100%;
+            background: #667eea;
+            border-radius: 2px;
+            animation: progress 2s ease-in-out infinite;
+        }
+
+        @keyframes progress {
+            0% { width: 0%; margin-left: 0%; }
+            50% { width: 100%; margin-left: 0%; }
+            100% { width: 0%; margin-left: 100%; }
+        }
+
+        .retry-countdown {
+            font-size: 14px;
+            color: #666;
+            margin-top: 12px;
+        }
+
+        /* 5. 空状态（无数据） */
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+        }
+
+        .empty-icon {
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 24px;
+            background: #f3f4f6;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+        }
+
+        .empty-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .empty-desc {
+            font-size: 15px;
+            color: #6b7280;
+            max-width: 400px;
+            margin: 0 auto 24px;
+            line-height: 1.6;
+        }
+
+        /* 6. 403 权限错误 */
+        .error-403 {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .lock-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 32px;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            position: relative;
+        }
+
+        .lock-shake {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-10deg); }
+            75% { transform: rotate(10deg); }
+        }
+
+        .permission-list {
+            max-width: 360px;
+            margin: 24px auto;
+            text-align: left;
+            background: #f9fafb;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .permission-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            font-size: 14px;
+            color: #4b5563;
+        }
+
+        .permission-item.denied {
+            color: #dc2626;
+        }
+
+        .permission-item.allowed {
+            color: #16a34a;
+        }
+
+        /* 7. Toast 通知 */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .toast {
+            background: white;
+            border-radius: 12px;
+            padding: 16px 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 320px;
+            max-width: 480px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .toast-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .toast-icon.error { background: #fee2e2; }
+        .toast-icon.success { background: #dcfce7; }
+        .toast-icon.warning { background: #fef3c7; }
+        .toast-icon.info { background: #dbeafe; }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: 600;
+            color: #1a1a2e;
+            margin-bottom: 2px;
+        }
+
+        .toast-message {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .toast-close {
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: transparent;
+            color: #999;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        .toast-close:hover {
+            color: #333;
+        }
+
+        /* 8. 错误详情展开 */
+        .error-details {
+            margin-top: 24px;
+            text-align: center;
+        }
+
+        .error-details-toggle {
+            font-size: 14px;
+            color: #667eea;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .error-details-content {
+            display: none;
+            margin-top: 16px;
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: left;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            color: #374151;
+            overflow-x: auto;
+        }
+
+        .error-details-content.show {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .error-trace {
+            line-height: 1.8;
+        }
+
+        .error-trace-line {
+            padding: 2px 0;
+        }
+
+        .error-trace-line.highlight {
+            background: #fee2e2;
+            margin: 0 -16px;
+            padding: 2px 16px;
+        }
+
+        /* 9. 列表错误状态 */
+        .list-error {
+            padding: 40px;
+            text-align: center;
+        }
+
+        .list-error-placeholder {
+            height: 200px;
+            background: linear-gradient(180deg, #f9fafb 0%, #f3f4f6 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .list-error-placeholder::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            to { left: 100%; }
+        }
+
+        /* 10. 部分加载失败 */
+        .partial-error {
+            padding: 24px;
+        }
+
+        .partial-error-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: #fef3c7;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .partial-error-icon {
+            width: 32px;
+            height: 32px;
+            background: #f59e0b;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+        }
+
+        .partial-error-text {
+            flex: 1;
+            font-size: 14px;
+            color: #92400e;
+        }
+
+        .loaded-content {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .content-placeholder {
+            height: 60px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        /* 按钮样式 */
+        .btn {
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: #667eea;
+        }
+
+        .btn-ghost:hover {
+            background: #ede9fe;
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+
+        /* 加载动画 */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 响应式 */
+        @media (max-width: 640px) {
+            .control-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .preview-content {
+                padding: 24px;
+            }
+
+            .error-code {
+                font-size: 48px;
+            }
+
+            .toast-container {
+                left: 20px;
+                right: 20px;
+            }
+
+            .toast {
+                min-width: auto;
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>🛡️ 错误处理体验设计</h1>
+            <p>优雅地处理错误，提升用户体验</p>
+        </div>
+
+        <!-- 控制面板 -->
+        <div class="control-panel">
+            <div class="control-title">选择错误场景</div>
+            <div class="control-grid">
+                <button class="control-btn active" onclick="showError('404')">
+                    <span>🔍</span> 404 页面不存在
+                </button>
+                <button class="control-btn" onclick="showError('500')">
+                    <span>💥</span> 500 服务器错误
+                </button>
+                <button class="control-btn" onclick="showError('network')">
+                    <span>📡</span> 网络连接失败
+                </button>
+                <button class="control-btn" onclick="showError('form')">
+                    <span>📝</span> 表单验证错误
+                </button>
+                <button class="control-btn" onclick="showError('403')">
+                    <span>🔒</span> 403 权限不足
+                </button>
+                <button class="control-btn" onclick="showError('empty')">
+                    <span>📭</span> 无数据状态
+                </button>
+                <button class="control-btn" onclick="showError('partial')">
+                    <span>⚠️</span> 部分加载失败
+                </button>
+                <button class="control-btn" onclick="showError('inline')">
+                    <span>💬</span> 内联错误提示
+                </button>
+                <button class="control-btn" onclick="showToast('error')">
+                    <span>❌</span> Error Toast
+                </button>
+                <button class="control-btn" onclick="showToast('success')">
+                    <span>✅</span> Success Toast
+                </button>
+                <button class="control-btn" onclick="showToast('warning')">
+                    <span>⚡</span> Warning Toast
+                </button>
+            </div>
+        </div>
+
+        <!-- 预览区域 -->
+        <div class="preview-area">
+            <div class="preview-header">
+                <span class="preview-title">错误状态预览</span>
+                <button class="btn btn-sm btn-secondary" onclick="resetView()">重置</button>
+            </div>
+            <div class="preview-content" id="previewContent">
+                <!-- 动态内容 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 容器 -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // 错误场景模板
+        const errorTemplates = {
+            '404': `
+                <div class="error-page">
+                    <div class="error-illustration">🔍</div>
+                    <div class="error-code">404</div>
+                    <div class="error-title">页面找不到了</div>
+                    <div class="error-message">
+                        抱歉，您访问的页面可能已被删除、移动或从未存在过。
+                        请检查网址是否正确，或返回首页继续浏览。
+                    </div>
+                    <div class="error-actions">
+                        <button class="btn btn-primary" onclick="goBack()">
+                            <span>←</span> 返回上一页
+                        </button>
+                        <a href="/" class="btn btn-secondary">🏠 回到首页</a>
+                    </div>
+                    <div class="error-details">
+                        <div class="error-details-toggle" onclick="toggleDetails()">
+                            <span>查看详情</span>
+                            <span id="toggleIcon">▼</span>
+                        </div>
+                        <div class="error-details-content" id="errorDetails">
+                            <div class="error-trace">
+                                <div class="error-trace-line">Error: Page not found</div>
+                                <div class="error-trace-line">URL: /old-page-that-does-not-exist</div>
+                                <div class="error-trace-line">Method: GET</div>
+                                <div class="error-trace-line highlight">Time: ${new Date().toISOString()}</div>
+                                <div class="error-trace-line">Request ID: req_${Math.random().toString(36).substr(2, 9)}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+
+            '500': `
+                <div class="error-page">
+                    <div class="error-illustration" style="background: #fee2e2;">💥</div>
+                    <div class="error-code" style="color: #dc2626;">500</div>
+                    <div class="error-title">服务器出错了</div>
+                    <div class="error-message">
+                        抱歉，服务器遇到了意外错误，无法完成您的请求。
+                        我们的技术团队已经收到通知，正在紧急修复中。
+                    </div>
+                    <div class="error-actions">
+                        <button class="btn btn-primary" onclick="refreshPage()">
+                            <span class="spinner" style="display:none"></span>
+                            <span>🔄 刷新重试</span>
+                        </button>
+                        <button class="btn btn-secondary" onclick="contactSupport()">📞 联系客服</button>
+                    </div>
+                    <div class="error-details">
+                        <div class="error-details-toggle" onclick="toggleDetails()">
+                            <span>错误详情（供技术人员查看）</span>
+                            <span id="toggleIcon">▼</span>
+                        </div>
+                        <div class="error-details-content" id="errorDetails">
+                            <div class="error-trace">
+                                <div class="error-trace-line">Internal Server Error</div>
+                                <div class="error-trace-line highlight">TypeError: Cannot read property 'data' of undefined</div>
+                                <div class="error-trace-line">    at getUserData (/api/users.js:45:12)</div>
+                                <div class="error-trace-line">    at processTicksAndRejections (internal/process/task_queues.js:97:5)</div>
+                                <div class="error-trace-line">Request ID: err_${Math.random().toString(36).substr(2, 9)}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+
+            'network': `
+                <div class="error-network">
+                    <div class="network-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+                            <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+                            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+                            <line x1="12" y1="20" x2="12.01" y2="20"/>
+                            <line x1="2" y1="2" x2="22" y2="22"/>
+                        </svg>
+                    </div>
+                    <div class="error-title">网络连接失败</div>
+                    <div class="error-message">
+                        无法连接到服务器，请检查您的网络连接。<br>
+                        系统将在 <strong id="countdown">5</strong> 秒后自动重试...
+                    </div>
+                    <div class="retry-progress">
+                        <div class="retry-progress-bar"></div>
+                    </div>
+                    <div class="error-actions">
+                        <button class="btn btn-primary" onclick="retryNow()">立即重试</button>
+                        <button class="btn btn-secondary" onclick="checkNetwork()">检查网络</button>
+                    </div>
+                    <div class="retry-countdown">
+                        已重试 <span id="retryCount">0</span> 次
+                    </div>
+                </div>
+            `,
+
+            'form': `
+                <div class="form-error-demo">
+                    <div class="error-inline" style="margin-bottom: 24px;">
+                        <div class="error-inline-icon">!</div>
+                        <div class="error-inline-content">
+                            <div class="error-inline-title">请修正以下错误</div>
+                            <div class="error-inline-text">表单中有 3 处错误需要修正后才能提交</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">邮箱地址 *</label>
+                        <div class="form-input-wrapper">
+                            <input type="email" class="form-input error" value="invalid-email" id="emailInput">
+                            <span class="form-input-icon">✕</span>
+                        </div>
+                        <div class="form-error-text">
+                            <span>⚠</span> 请输入有效的邮箱地址，如 example@domain.com
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">密码 *</label>
+                        <div class="form-input-wrapper">
+                            <input type="password" class="form-input error" value="123" id="passwordInput">
+                            <span class="form-input-icon">✕</span>
+                        </div>
+                        <div class="form-error-text">
+                            <span>⚠</span> 密码长度至少 8 位，需包含字母和数字
+                        </div>
+                        <div class="form-hint">密码强度: <span style="color: #dc2626;">弱</span></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">手机号码</label>
+                        <div class="form-input-wrapper">
+                            <input type="tel" class="form-input" placeholder="请输入手机号" id="phoneInput">
+                        </div>
+                        <div class="form-hint">选填，用于接收订单通知</div>
+                    </div>
+
+                    <div class="form-actions" style="margin-top: 24px;">
+                        <button class="btn btn-primary" onclick="submitForm()">提交</button>
+                        <button class="btn btn-secondary" onclick="resetForm()">重置</button>
+                    </div>
+                </div>
+            `,
+
+            '403': `
+                <div class="error-403">
+                    <div class="lock-icon" id="lockIcon">🔒</div>
+                    <div class="error-title">访问被拒绝</div>
+                    <div class="error-message">
+                        抱歉，您没有权限访问此页面。<br>
+                        如需访问，请联系管理员申请相应权限。
+                    </div>
+
+                    <div class="permission-list">
+                        <div class="permission-item denied">
+                            <span>✕</span>
+                            <span>查看财务报表</span>
+                        </div>
+                        <div class="permission-item denied">
+                            <span>✕</span>
+                            <span>导出敏感数据</span>
+                        </div>
+                        <div class="permission-item allowed">
+                            <span>✓</span>
+                            <span>查看公开数据</span>
+                        </div>
+                        <div class="permission-item allowed">
+                            <span>✓</span>
+                            <span>编辑个人资料</span>
+                        </div>
+                    </div>
+
+                    <div class="error-actions">
+                        <button class="btn btn-primary" onclick="applyPermission()">📝 申请权限</button>
+                        <button class="btn btn-secondary" onclick="goBack()">← 返回</button>
+                    </div>
+                </div>
+            `,
+
+            'empty': `
+                <div class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <div class="empty-title">暂无数据</div>
+                    <div class="empty-desc">
+                        当前列表为空，可能是因为：<br>
+                        • 还没有创建任何内容<br>
+                        • 筛选条件过于严格<br>
+                        • 数据已被删除
+                    </div>
+                    <div class="error-actions">
+                        <button class="btn btn-primary" onclick="createNew()">✨ 创建新内容</button>
+                        <button class="btn btn-ghost" onclick="clearFilter()">清除筛选</button>
+                    </div>
+                </div>
+            `,
+
+            'partial': `
+                <div class="partial-error">
+                    <div class="partial-error-header">
+                        <div class="partial-error-icon">!</div>
+                        <div class="partial-error-text">
+                            <strong>部分内容加载失败</strong><br>
+                            推荐模块暂时无法显示，但其他功能正常使用
+                        </div>
+                        <button class="btn btn-sm btn-secondary" onclick="retryModule()">重试</button>
+                    </div>
+
+                    <div class="loaded-content">
+                        <div class="content-placeholder"></div>
+                        <div class="content-placeholder" style="width: 80%;"></div>
+                        <div class="content-placeholder" style="width: 60%;"></div>
+                    </div>
+                </div>
+            `,
+
+            'inline': `
+                <div style="max-width: 600px; margin: 0 auto;">
+                    <div class="error-inline">
+                        <div class="error-inline-icon">!</div>
+                        <div class="error-inline-content">
+                            <div class="error-inline-title">保存失败</div>
+                            <div class="error-inline-text">
+                                由于网络波动，您的更改未能保存到服务器。请检查网络连接后重试。
+                            </div>
+                            <div class="error-inline-actions">
+                                <button class="btn btn-sm btn-primary" onclick="retrySave()">重新保存</button>
+                                <button class="btn btn-sm btn-ghost" onclick="downloadLocal()">下载到本地</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: #f9fafb; padding: 20px; border-radius: 12px; margin-top: 20px;">
+                        <p style="color: #666; font-size: 14px;">这里是正常的内容区域...</p>
+                    </div>
+                </div>
+            `
+        };
+
+        let retryCounter = 0;
+
+        function showError(type) {
+            // 更新按钮状态
+            document.querySelectorAll('.control-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.closest('.control-btn').classList.add('active');
+
+            // 显示对应模板
+            const content = document.getElementById('previewContent');
+            content.innerHTML = errorTemplates[type] || '<p>未知错误类型</p>';
+
+            // 特殊处理
+            if (type === 'network') {
+                startCountdown();
+            }
+        }
+
+        function resetView() {
+            document.getElementById('previewContent').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon" style="font-size: 48px;">👆</div>
+                    <div class="empty-title">选择上方按钮预览错误状态</div>
+                    <div class="empty-desc">点击控制面板中的场景按钮查看对应的错误处理界面</div>
+                </div>
+            `;
+            document.querySelectorAll('.control-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+        }
+
+        // Toast 通知
+        function showToast(type) {
+            const container = document.getElementById('toastContainer');
+            const id = 'toast_' + Date.now();
+
+            const toastConfig = {
+                error: {
+                    icon: '❌',
+                    title: '操作失败',
+                    message: '无法删除该文件，请检查权限后重试',
+                    bg: '#fee2e2'
+                },
+                success: {
+                    icon: '✅',
+                    title: '操作成功',
+                    message: '文件已成功保存到云端',
+                    bg: '#dcfce7'
+                },
+                warning: {
+                    icon: '⚡',
+                    title: '请注意',
+                    message: '您的会话将在 5 分钟后过期',
+                    bg: '#fef3c7'
+                },
+                info: {
+                    icon: 'ℹ️',
+                    title: '系统通知',
+                    message: '新版本已发布，点击了解详情',
+                    bg: '#dbeafe'
+                }
+            };
+
+            const config = toastConfig[type];
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.id = id;
+            toast.innerHTML = `
+                <div class="toast-icon ${type}">${config.icon}</div>
+                <div class="toast-content">
+                    <div class="toast-title">${config.title}</div>
+                    <div class="toast-message">${config.message}</div>
+                </div>
+                <button class="toast-close" onclick="closeToast('${id}')">×</button>
+            `;
+
+            container.appendChild(toast);
+
+            // 自动关闭
+            setTimeout(() => closeToast(id), 5000);
+        }
+
+        function closeToast(id) {
+            const toast = document.getElementById(id);
+            if (toast) {
+                toast.style.animation = 'fadeIn 0.2s ease reverse';
+                setTimeout(() => toast.remove(), 200);
+            }
+        }
+
+        // 错误详情展开/收起
+        function toggleDetails() {
+            const content = document.getElementById('errorDetails');
+            const icon = document.getElementById('toggleIcon');
+            content.classList.toggle('show');
+            icon.textContent = content.classList.contains('show') ? '▲' : '▼';
+        }
+
+        // 网络错误倒计时
+        function startCountdown() {
+            let count = 5;
+            const countdownEl = document.getElementById('countdown');
+            if (!countdownEl) return;
+
+            const timer = setInterval(() => {
+                count--;
+                countdownEl.textContent = count;
+                if (count <= 0) {
+                    clearInterval(timer);
+                    retryCounter++;
+                    document.getElementById('retryCount').textContent = retryCounter;
+                    countdownEl.textContent = '5';
+                    startCountdown(); // 重新开始
+                }
+            }, 1000);
+        }
+
+        // 交互函数
+        function goBack() {
+            showToast('info');
+            alert('返回上一页');
+        }
+
+        function refreshPage() {
+            const spinner = document.querySelector('.spinner');
+            const text = spinner.nextElementSibling;
+            spinner.style.display = 'inline-block';
+            text.textContent = '刷新中...';
+
+            setTimeout(() => {
+                spinner.style.display = 'none';
+                text.textContent = '🔄 刷新重试';
+                showToast('success');
+            }, 1500);
+        }
+
+        function contactSupport() {
+            alert('打开客服聊天窗口');
+        }
+
+        function retryNow() {
+            retryCounter++;
+            document.getElementById('retryCount').textContent = retryCounter;
+            showToast('success');
+        }
+
+        function checkNetwork() {
+            alert('正在检测网络连接...');
+        }
+
+        function submitForm() {
+            showToast('warning');
+        }
+
+        function resetForm() {
+            document.getElementById('emailInput').value = '';
+            document.getElementById('passwordInput').value = '';
+            showToast('success');
+        }
+
+        function applyPermission() {
+            alert('打开权限申请表单');
+        }
+
+        function createNew() {
+            alert('打开创建向导');
+        }
+
+        function clearFilter() {
+            showToast('success');
+        }
+
+        function retryModule() {
+            showToast('success');
+        }
+
+        function retrySave() {
+            showToast('success');
+        }
+
+        function downloadLocal() {
+            alert('正在下载文件到本地...');
+        }
+
+        // 初始化
+        resetView();
+    </script>
+</body>
+</html>

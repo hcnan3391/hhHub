@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 智能搜索</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* 头部 */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 36px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        /* 搜索框区域 */
+        .search-container {
+            position: relative;
+            margin-bottom: 24px;
+        }
+
+        .search-box {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .search-input-wrapper {
+            display: flex;
+            align-items: center;
+            padding: 16px 20px;
+            gap: 12px;
+        }
+
+        .search-icon {
+            width: 24px;
+            height: 24px;
+            color: #999;
+            flex-shrink: 0;
+        }
+
+        .search-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 17px;
+            color: #333;
+            background: transparent;
+            min-width: 0;
+        }
+
+        .search-input::placeholder {
+            color: #aaa;
+        }
+
+        .search-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: #f5f5f5;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background: #e8e8e8;
+        }
+
+        .search-btn {
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        /* AI 模式标签 */
+        .ai-mode-tabs {
+            display: flex;
+            padding: 0 20px 12px;
+            gap: 8px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .ai-tab {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .ai-tab:hover {
+            background: #e8e8e8;
+        }
+
+        .ai-tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        /* 下拉建议 */
+        .suggestions {
+            display: none;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .suggestions.show {
+            display: block;
+        }
+
+        .suggestion-section {
+            padding: 12px 0;
+        }
+
+        .suggestion-title {
+            padding: 4px 20px 8px;
+            font-size: 12px;
+            color: #999;
+            font-weight: 500;
+        }
+
+        .suggestion-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .suggestion-item:hover {
+            background: #f8f9ff;
+        }
+
+        .suggestion-icon {
+            width: 18px;
+            height: 18px;
+            margin-right: 12px;
+            color: #999;
+        }
+
+        .suggestion-text {
+            flex: 1;
+            font-size: 15px;
+            color: #333;
+        }
+
+        .suggestion-text mark {
+            background: #fef08a;
+            color: #854d0e;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+
+        /* AI 问答区域 */
+        .ai-answer {
+            display: none;
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .ai-answer.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .ai-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .ai-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+        }
+
+        .ai-info h3 {
+            font-size: 16px;
+            color: #333;
+        }
+
+        .ai-info span {
+            font-size: 13px;
+            color: #667eea;
+        }
+
+        .ai-content {
+            font-size: 15px;
+            line-height: 1.8;
+            color: #333;
+            margin-bottom: 16px;
+        }
+
+        .ai-sources {
+            padding-top: 16px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .ai-sources-title {
+            font-size: 13px;
+            color: #999;
+            margin-bottom: 8px;
+        }
+
+        .source-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .source-tag {
+            padding: 6px 12px;
+            background: #f5f5f5;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        /* 搜索结果 */
+        .results-container {
+            display: none;
+        }
+
+        .results-container.show {
+            display: block;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 0 4px;
+        }
+
+        .results-count {
+            font-size: 14px;
+            color: rgba(255,255,255,0.9);
+        }
+
+        .results-filters {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-btn {
+            padding: 6px 14px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 20px;
+            font-size: 13px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: white;
+            color: #667eea;
+        }
+
+        /* 结果卡片 */
+        .result-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .result-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .result-icon.doc { background: #dbeafe; }
+        .result-icon.sheet { background: #dcfce7; }
+        .result-icon.slide { background: #fef3c7; }
+        .result-icon.pdf { background: #fee2e2; }
+
+        .result-meta {
+            flex: 1;
+        }
+
+        .result-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a1a2e;
+            margin-bottom: 2px;
+        }
+
+        .result-path {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .result-desc {
+            font-size: 14px;
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .result-desc mark {
+            background: #fef08a;
+            color: #854d0e;
+            padding: 0 2px;
+        }
+
+        .result-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .result-tags {
+            display: flex;
+            gap: 6px;
+        }
+
+        .result-tag {
+            padding: 4px 10px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .result-time {
+            font-size: 12px;
+            color: #999;
+        }
+
+        /* 快捷入口 */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 640px) {
+            .quick-actions {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .quick-card {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .quick-card:hover {
+            background: rgba(255,255,255,0.25);
+            transform: translateY(-2px);
+        }
+
+        .quick-icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .quick-label {
+            font-size: 14px;
+            color: white;
+            font-weight: 500;
+        }
+
+        /* 加载状态 */
+        .loading-state {
+            display: none;
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .loading-state.show {
+            display: block;
+        }
+
+        .loading-dots {
+            display: inline-flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .loading-dot {
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            animation: bounce 1.4s ease-in-out infinite;
+        }
+
+        .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        .loading-text {
+            color: white;
+            font-size: 15px;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: rgba(255,255,255,0.8);
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .empty-title {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .empty-desc {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        /* 语音动画 */
+        .voice-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .voice-overlay.show {
+            display: flex;
+        }
+
+        .voice-box {
+            text-align: center;
+            color: white;
+        }
+
+        .voice-waves {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            height: 80px;
+            margin-bottom: 24px;
+        }
+
+        .voice-wave {
+            width: 6px;
+            background: #667eea;
+            border-radius: 3px;
+            animation: voice 1s ease-in-out infinite;
+        }
+
+        .voice-wave:nth-child(1) { height: 20px; animation-delay: 0s; }
+        .voice-wave:nth-child(2) { height: 40px; animation-delay: 0.1s; }
+        .voice-wave:nth-child(3) { height: 60px; animation-delay: 0.2s; }
+        .voice-wave:nth-child(4) { height: 40px; animation-delay: 0.3s; }
+        .voice-wave:nth-child(5) { height: 20px; animation-delay: 0.4s; }
+
+        @keyframes voice {
+            0%, 100% { transform: scaleY(0.5); }
+            50% { transform: scaleY(1); }
+        }
+
+        .voice-text {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+
+        .voice-hint {
+            font-size: 14px;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>🔍 AI 智能搜索</h1>
+            <p>基于大模型的企业知识库智能检索</p>
+        </div>
+
+        <!-- 快捷入口 -->
+        <div class="quick-actions" id="quickActions">
+            <div class="quick-card" onclick="quickSearch('本周销售数据')">
+                <div class="quick-icon">📊</div>
+                <div class="quick-label">销售报表</div>
+            </div>
+            <div class="quick-card" onclick="quickSearch('产品发布流程')">
+                <div class="quick-icon">📋</div>
+                <div class="quick-label">流程文档</div>
+            </div>
+            <div class="quick-card" onclick="quickSearch('团队通讯录')">
+                <div class="quick-icon">👥</div>
+                <div class="quick-label">人员查询</div>
+            </div>
+            <div class="quick-card" onclick="quickSearch('最近会议纪要')">
+                <div class="quick-icon">📝</div>
+                <div class="quick-label">会议纪要</div>
+            </div>
+        </div>
+
+        <!-- 搜索区域 -->
+        <div class="search-container">
+            <div class="search-box">
+                <div class="search-input-wrapper">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <input type="text" class="search-input" id="searchInput"
+                           placeholder="搜索文档、数据、人员，或直接提问..."
+                           autocomplete="off">
+                    <div class="search-actions">
+                        <button class="action-btn" id="clearBtn" style="display:none">✕</button>
+                        <button class="action-btn" id="voiceBtn">🎤</button>
+                        <button class="search-btn" onclick="performSearch()">搜索</button>
+                    </div>
+                </div>
+
+                <!-- AI 模式选择 -->
+                <div class="ai-mode-tabs">
+                    <div class="ai-tab active" data-mode="all" onclick="setMode('all')">
+                        <span>🔍</span> 综合
+                    </div>
+                    <div class="ai-tab" data-mode="ai" onclick="setMode('ai')">
+                        <span>🤖</span> AI问答
+                    </div>
+                    <div class="ai-tab" data-mode="doc" onclick="setMode('doc')">
+                        <span>📄</span> 文档
+                    </div>
+                    <div class="ai-tab" data-mode="data" onclick="setMode('data')">
+                        <span>📊</span> 数据
+                    </div>
+                </div>
+
+                <!-- 搜索建议 -->
+                <div class="suggestions" id="suggestions">
+                    <div class="suggestion-section">
+                        <div class="suggestion-title">历史搜索</div>
+                        <div class="suggestion-item" onclick="selectSuggestion('Q3季度销售报告')">
+                            <svg class="suggestion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                            </svg>
+                            <span class="suggestion-text">Q3季度销售报告</span>
+                        </div>
+                        <div class="suggestion-item" onclick="selectSuggestion('产品 roadmap')">
+                            <svg class="suggestion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                            </svg>
+                            <span class="suggestion-text">产品 roadmap</span>
+                        </div>
+                    </div>
+                    <div class="suggestion-section">
+                        <div class="suggestion-title">热门推荐</div>
+                        <div class="suggestion-item" onclick="selectSuggestion('2024年度规划')">
+                            <svg class="suggestion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #f59e0b;">
+                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                            </svg>
+                            <span class="suggestion-text">2024年度规划</span>
+                        </div>
+                        <div class="suggestion-item" onclick="selectSuggestion('新人入职指南')">
+                            <svg class="suggestion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #f59e0b;">
+                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                            </svg>
+                            <span class="suggestion-text">新人入职指南</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 加载状态 -->
+        <div class="loading-state" id="loadingState">
+            <div class="loading-dots">
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+            </div>
+            <div class="loading-text">AI 正在思考...</div>
+        </div>
+
+        <!-- AI 答案区域 -->
+        <div class="ai-answer" id="aiAnswer">
+            <div class="ai-header">
+                <div class="ai-avatar">AI</div>
+                <div class="ai-info">
+                    <h3>智能助手</h3>
+                    <span>基于企业知识库生成</span>
+                </div>
+            </div>
+            <div class="ai-content" id="aiContent">
+                <!-- 动态内容 -->
+            </div>
+            <div class="ai-sources">
+                <div class="ai-sources-title">参考来源</div>
+                <div class="source-tags">
+                    <span class="source-tag">📊 Q3销售数据表</span>
+                    <span class="source-tag">📋 月度总结模板</span>
+                    <span class="source-tag">📈 业绩分析PPT</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 搜索结果 -->
+        <div class="results-container" id="resultsContainer">
+            <div class="results-header">
+                <span class="results-count">找到约 <strong>128</strong> 个结果</span>
+                <div class="results-filters">
+                    <button class="filter-btn active">全部</button>
+                    <button class="filter-btn">文档</button>
+                    <button class="filter-btn">表格</button>
+                    <button class="filter-btn">幻灯片</button>
+                </div>
+            </div>
+
+            <div id="resultsList">
+                <!-- 动态生成 -->
+            </div>
+        </div>
+
+        <!-- 空状态 -->
+        <div class="empty-state" id="emptyState">
+            <div class="empty-icon">🔍</div>
+            <div class="empty-title">开始智能搜索</div>
+            <div class="empty-desc">输入关键词搜索文档，或直接向 AI 提问</div>
+        </div>
+    </div>
+
+    <!-- 语音搜索 -->
+    <div class="voice-overlay" id="voiceOverlay">
+        <div class="voice-box">
+            <div class="voice-waves">
+                <div class="voice-wave"></div>
+                <div class="voice-wave"></div>
+                <div class="voice-wave"></div>
+                <div class="voice-wave"></div>
+                <div class="voice-wave"></div>
+            </div>
+            <div class="voice-text">正在聆听...</div>
+            <div class="voice-hint">点击任意位置取消</div>
+        </div>
+    </div>
+
+    <script>
+        // 模拟数据
+        const mockResults = [
+            {
+                id: 1,
+                icon: 'doc',
+                iconEmoji: '📄',
+                title: '2024年度销售策略规划',
+                path: '销售部 / 战略规划 / 2024',
+                desc: '本文档详细阐述了2024年度的销售目标、市场策略、渠道布局等核心内容，预计<mark>销售</mark>额增长30%...',
+                tags: ['销售', '年度规划', '战略'],
+                time: '3天前'
+            },
+            {
+                id: 2,
+                icon: 'sheet',
+                iconEmoji: '📊',
+                title: 'Q3季度销售数据汇总表',
+                path: '数据分析 / 季度报表 / Q3',
+                desc: '包含各区域<mark>销售</mark>数据、同比增长率、目标达成率等关键指标，支持多维度筛选分析...',
+                tags: ['数据', 'Q3', '报表'],
+                time: '1周前'
+            },
+            {
+                id: 3,
+                icon: 'slide',
+                iconEmoji: '📽️',
+                title: '销售团队月度总结汇报',
+                path: '销售部 / 会议记录 / 10月',
+                desc: '10月份<mark>销售</mark>团队工作总结，包含业绩回顾、问题分析、下月计划等内容...',
+                tags: ['汇报', '月度总结', '团队'],
+                time: '2周前'
+            },
+            {
+                id: 4,
+                icon: 'pdf',
+                iconEmoji: '📑',
+                title: '销售培训手册 v3.0',
+                path: '人力资源 / 培训资料',
+                desc: '新版<mark>销售</mark>培训手册，涵盖产品知识、销售技巧、客户管理等内容，适用于新入职销售...',
+                tags: ['培训', '手册', '新人'],
+                time: '1个月前'
+            }
+        ];
+
+        const aiResponses = {
+            'default': `根据企业知识库检索，我为您整理了以下信息：
+
+**核心要点：**
+• 2024年销售目标已设定为 5000 万元，同比增长 30%
+• Q3 季度实际完成 1150 万元，达成率 92%
+• 华东区表现最佳，超额完成目标 15%
+• 建议重点关注华北区，目前达成率仅 78%
+
+**行动计划：**
+1. 加强华北区销售团队培训（参考《销售培训手册 v3.0》）
+2. 优化产品组合策略，提升客单价
+3. 增加渠道合作伙伴激励力度
+
+如需查看详细数据，可参考下方相关文档。`,
+
+            '流程': `产品发布流程包含以下关键步骤：
+
+**阶段一：需求评审（1-2周）**
+• 产品需求文档编写
+• 跨部门评审会议
+• 技术可行性评估
+
+**阶段二：开发测试（3-4周）**
+• 开发排期确认
+• 迭代开发与内测
+• QA 测试与验收
+
+**阶段三：发布上线（1周）**
+• 上线检查清单确认
+• 灰度发布
+• 全量发布与监控
+
+详细流程文档请参考《产品发布SOP》`,
+
+            '会议': `最近的重要会议记录：
+
+**10月25日 - 产品战略会**
+• 确定了Q4产品路线图
+• 决议增加 AI 功能模块
+• 参会人：产品、技术、设计负责人
+
+**10月20日 - 销售复盘会**
+• Q3业绩回顾与表彰
+• 销售策略调整讨论
+• 决议增加客户成功团队
+
+**10月15日 - 全员大会**
+• 公司新愿景发布
+• 组织架构调整说明
+• 下阶段重点工作布置`
+        };
+
+        let currentMode = 'all';
+        let isSearching = false;
+
+        // DOM 元素
+        const searchInput = document.getElementById('searchInput');
+        const clearBtn = document.getElementById('clearBtn');
+        const voiceBtn = document.getElementById('voiceBtn');
+        const suggestions = document.getElementById('suggestions');
+        const loadingState = document.getElementById('loadingState');
+        const aiAnswer = document.getElementById('aiAnswer');
+        const aiContent = document.getElementById('aiContent');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const resultsList = document.getElementById('resultsList');
+        const emptyState = document.getElementById('emptyState');
+        const voiceOverlay = document.getElementById('voiceOverlay');
+        const quickActions = document.getElementById('quickActions');
+
+        // 事件监听
+        searchInput.addEventListener('input', (e) => {
+            clearBtn.style.display = e.target.value ? 'flex' : 'none';
+            if (e.target.value) {
+                suggestions.classList.add('show');
+            } else {
+                suggestions.classList.remove('show');
+            }
+        });
+
+        searchInput.addEventListener('focus', () => {
+            if (searchInput.value) {
+                suggestions.classList.add('show');
+            }
+        });
+
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                suggestions.classList.remove('show');
+                performSearch();
+            }
+            if (e.key === 'Escape') {
+                suggestions.classList.remove('show');
+            }
+        });
+
+        clearBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            clearBtn.style.display = 'none';
+            searchInput.focus();
+            resetView();
+        });
+
+        voiceBtn.addEventListener('click', startVoiceSearch);
+
+        voiceOverlay.addEventListener('click', () => {
+            voiceOverlay.classList.remove('show');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-box')) {
+                suggestions.classList.remove('show');
+            }
+        });
+
+        // 模式切换
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.ai-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+        }
+
+        // 快速搜索
+        function quickSearch(query) {
+            searchInput.value = query;
+            clearBtn.style.display = 'flex';
+            performSearch();
+        }
+
+        // 选择建议
+        function selectSuggestion(text) {
+            searchInput.value = text;
+            suggestions.classList.remove('show');
+            performSearch();
+        }
+
+        // 语音搜索
+        function startVoiceSearch() {
+            voiceOverlay.classList.add('show');
+
+            setTimeout(() => {
+                voiceOverlay.classList.remove('show');
+                searchInput.value = '本周销售数据怎么样';
+                clearBtn.style.display = 'flex';
+                performSearch();
+            }, 3000);
+        }
+
+        // 执行搜索
+        function performSearch() {
+            const query = searchInput.value.trim();
+            if (!query || isSearching) return;
+
+            isSearching = true;
+
+            // 隐藏其他区域
+            emptyState.style.display = 'none';
+            quickActions.style.display = 'none';
+            aiAnswer.classList.remove('show');
+            resultsContainer.classList.remove('show');
+
+            // 显示加载
+            loadingState.classList.add('show');
+
+            // 模拟搜索延迟
+            setTimeout(() => {
+                loadingState.classList.remove('show');
+                isSearching = false;
+
+                // 根据模式显示结果
+                if (currentMode === 'ai') {
+                    showAIAnswer(query);
+                } else {
+                    showAIAndResults(query);
+                }
+            }, 1500);
+        }
+
+        // 显示 AI 答案 + 搜索结果
+        function showAIAndResults(query) {
+            // AI 回答
+            let response = aiResponses.default;
+            if (query.includes('流程') || query.includes('步骤')) {
+                response = aiResponses['流程'];
+            } else if (query.includes('会议') || query.includes('纪要')) {
+                response = aiResponses['会议'];
+            }
+
+            aiContent.innerHTML = response.replace(/\n\n/g, '<br><br>').replace(/•/g, '&bull;');
+            aiAnswer.classList.add('show');
+
+            // 搜索结果
+            renderResults(query);
+            resultsContainer.classList.add('show');
+        }
+
+        // 纯 AI 模式
+        function showAIAnswer(query) {
+            let response = aiResponses.default;
+            if (query.includes('流程')) {
+                response = aiResponses['流程'];
+            } else if (query.includes('会议')) {
+                response = aiResponses['会议'];
+            }
+
+            aiContent.innerHTML = response.replace(/\n\n/g, '<br><br>').replace(/•/g, '&bull;');
+            aiAnswer.classList.add('show');
+        }
+
+        // 渲染搜索结果
+        function renderResults(query) {
+            const html = mockResults.map(item => `
+                <div class="result-card" onclick="openResult(${item.id})">
+                    <div class="result-header">
+                        <div class="result-icon ${item.icon}">${item.iconEmoji}</div>
+                        <div class="result-meta">
+                            <div class="result-title">${highlightText(item.title, query)}</div>
+                            <div class="result-path">${item.path}</div>
+                        </div>
+                    </div>
+                    <div class="result-desc">${highlightText(item.desc, query)}</div>
+                    <div class="result-footer">
+                        <div class="result-tags">
+                            ${item.tags.map(tag => `<span class="result-tag">${tag}</span>`).join('')}
+                        </div>
+                        <span class="result-time">${item.time}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            resultsList.innerHTML = html;
+        }
+
+        // 高亮文本
+        function highlightText(text, query) {
+            if (!query) return text;
+            const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
+            return text.replace(regex, '<mark>$1</mark>');
+        }
+
+        function escapeRegExp(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // 打开结果
+        function openResult(id) {
+            alert(`打开文档 ID: ${id}\n\n实际项目中会跳转到文档详情页`);
+        }
+
+        // 重置视图
+        function resetView() {
+            emptyState.style.display = 'block';
+            quickActions.style.display = 'grid';
+            aiAnswer.classList.remove('show');
+            resultsContainer.classList.remove('show');
+        }
+    </script>
+</body>
+</html>
