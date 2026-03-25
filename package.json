@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "db:init": "tsx src/scripts/init-db.ts",
-    "db:migrate": "tsx src/scripts/migrate-data.ts"
+    "db:migrate": "tsx src/scripts/migrate-data.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
@@ -22,15 +26,20 @@
     "react-dom": "19.2.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.51.1",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^20.19.37",
+    "@types/puppeteer": "^5.4.7",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "playwright": "^1.51.1",
     "prisma": "^5.22.0",
+    "puppeteer-core": "^24.40.0",
     "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5.9.3"
   }
 }
