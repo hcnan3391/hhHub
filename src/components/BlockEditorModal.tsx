@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { Modal, Form, Input, Select, Button, notification, Tabs, Upload, Space, Tooltip } from 'antd';
-import { PlusOutlined, DeleteOutlined, UploadOutlined, FileOutlined, CodeOutlined, EyeOutlined, EditOutlined } from '@ant-design/icons';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { Modal, Form, Input, Select, Button, notification, Tabs, Upload, Space, Tooltip, Popconfirm } from 'antd';
+import { PlusOutlined, DeleteOutlined, UploadOutlined, FileOutlined, CodeOutlined, EyeOutlined, EditOutlined, ImportOutlined } from '@ant-design/icons';
 import { materialCategories } from '@/data/recommendMaterials';
-import type { UploadFile } from 'antd/es/upload/interface';
+import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 import {
     SandpackProvider,
     SandpackLayout,
@@ -183,6 +183,51 @@ export default function BlockEditorModal({
     // 添加新文件
     const addFile = () => {
         setAddFileModal({ open: true, fileName: 'src/utils.ts' });
+    };
+
+    // 处理文件导入
+    const handleFileImport: UploadProps['beforeUpload'] = (file) => {
+        const allowedExtensions = ['.tsx', '.jsx', '.ts', '.js', '.json', '.css', '.less', '.scss', '.html'];
+        const fileName = file.name;
+        const ext = '.' + fileName.split('.').pop()?.toLowerCase();
+
+        if (!allowedExtensions.includes(ext)) {
+            notification.error({ message: `不支持的文件类型: ${ext}` });
+            return false;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const content = e.target?.result as string;
+            let filePath = `src/${fileName}`;
+
+            // 特殊处理 package.json，放在根目录
+            if (fileName === 'package.json') {
+                filePath = 'package.json';
+            }
+
+            // 检查文件是否已存在
+            const existingIndex = files.findIndex(f => f.path === filePath);
+            if (existingIndex >= 0) {
+                // 更新已存在的文件
+                setFiles(prev => prev.map(f => f.path === filePath ? { ...f, code: content } : f));
+                notification.success({ message: `文件「${filePath}」已更新` });
+            } else {
+                // 添加新文件
+                const newFile: FileItem = { path: filePath, code: content };
+                setFiles(prev => [...prev, newFile]);
+                notification.success({ message: `文件「${filePath}」导入成功` });
+            }
+
+            // 切换到导入的文件
+            setActiveFile(filePath);
+        };
+        reader.onerror = () => {
+            notification.error({ message: `读取文件「${fileName}」失败` });
+        };
+        reader.readAsText(file);
+
+        return false; // 阻止自动上传
     };
 
     const handleAddFileConfirm = () => {
@@ -465,9 +510,21 @@ export default function Component() {
                             }}
                         >
                             <span style={{ fontWeight: 500 }}>文件列表</span>
-                            <Button type='link' size='small' icon={<PlusOutlined />} onClick={addFile}>
-                                添加文件
-                            </Button>
+                            <Space size={4}>
+                                <Upload
+                                    accept='.tsx,.jsx,.ts,.js,.json,.css,.less,.scss,.html'
+                                    beforeUpload={handleFileImport}
+                                    showUploadList={false}
+                                    multiple
+                                >
+                                    <Button type='link' size='small' icon={<ImportOutlined />}>
+                                        导入文件
+                                    </Button>
+                                </Upload>
+                                <Button type='link' size='small' icon={<PlusOutlined />} onClick={addFile}>
+                                    添加文件
+                                </Button>
+                            </Space>
                         </div>
                         <div
                             style={{
